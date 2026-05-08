@@ -1,0 +1,7 @@
+project_id = "sqpxbgietkuyzvttdlca"
+
+[functions.ask-pandit]
+verify_jwt = false
+
+[functions.recommend-samagri]
+verify_jwt = false
