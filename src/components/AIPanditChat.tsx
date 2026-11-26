@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { Send, Sparkles, Loader2, X } from "lucide-react";
+import { Send, Sparkles, Loader2, X, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,9 +149,20 @@ const AIPanditChat = ({ variant = "panel", onClose }: AIPanditChatProps) => {
           </div>
         </div>
         {onClose && (
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors" aria-label="Close">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/ask-pandit"
+              onClick={onClose}
+              className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+              title="Open full page"
+              aria-label="Open full page"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </Link>
+            <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors" aria-label="Close">
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         )}
       </div>
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Search, Calendar, Sparkles, ChevronRight, Flame, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -201,6 +201,8 @@ const festivals2025 = [
 
 const Resources = () => {
   const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "calendar" ? "calendar" : "guides";
 
   const filteredGuides = ritualGuides.filter(
     (g) => g.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -229,7 +231,11 @@ const Resources = () => {
       {/* Tabs: Guides + Calendar */}
       <section className="py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Tabs defaultValue="guides" className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={(val) => setSearchParams(val === "calendar" ? { tab: "calendar" } : {})}
+            className="w-full"
+          >
             <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-10">
               <TabsTrigger value="guides" className="gap-2"><BookOpen className="w-4 h-4" /> Ritual Guides</TabsTrigger>
               <TabsTrigger value="calendar" className="gap-2"><Calendar className="w-4 h-4" /> Festival Calendar</TabsTrigger>

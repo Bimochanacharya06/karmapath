@@ -12,6 +12,8 @@ const dict: Dict = {
   "nav.explore": { en: "Explore", ne: "अन्वेषण" },
   "nav.marketplace": { en: "Samagri Marketplace", ne: "सामग्री बजार" },
   "nav.marketplaceDesc": { en: "AI-powered ritual goods guide", ne: "AI-संचालित अनुष्ठान सामग्री मार्गदर्शक" },
+  "nav.festivalCalendar": { en: "Festival Calendar", ne: "चाडपर्व पात्रो" },
+  "nav.festivalCalendarDesc": { en: "Nepali Hindu tithis & auspicious dates", ne: "नेपाली हिन्दू तिथि र शुभ साइतहरू" },
   "nav.askPandit": { en: "Ask AI Pandit", ne: "AI पण्डितलाई सोध्नुहोस्" },
   "nav.askPanditDesc": { en: "24/7 ritual guidance chatbot", ne: "२४/७ अनुष्ठान मार्गदर्शक च्याटबट" },
   "nav.blog": { en: "Blog", ne: "ब्लग" },

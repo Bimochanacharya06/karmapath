@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut, LayoutDashboard, ChevronDown, Sparkles, ShoppingBag } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, ChevronDown, ShoppingBag, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -22,7 +22,7 @@ const Navbar = () => {
       href: "#",
       children: [
         { label: t("nav.marketplace"), href: "/marketplace", icon: ShoppingBag, desc: t("nav.marketplaceDesc") },
-        { label: t("nav.askPandit"), href: "/ask-pandit", icon: Sparkles, desc: t("nav.askPanditDesc") },
+        { label: t("nav.festivalCalendar"), href: "/resources?tab=calendar", icon: Calendar, desc: t("nav.festivalCalendarDesc") },
       ],
     },
     { label: t("nav.blog"), href: "/blog" },
@@ -33,7 +33,7 @@ const Navbar = () => {
   useEffect(() => {
     setOpen(false);
     setDropdownOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -60,7 +60,7 @@ const Navbar = () => {
                 <div key={link.label} className="relative" ref={dropdownRef}>
                   <button onClick={() => setDropdownOpen(!dropdownOpen)}
                     className={`inline-flex items-center gap-1 text-sm font-medium transition-colors ${
-                      dropdownOpen || link.children.some((c) => c.href === location.pathname)
+                      dropdownOpen || link.children.some((c) => c.href.split("?")[0] === location.pathname && (!c.href.includes("?") || location.search === `?${c.href.split("?")[1]}`))
                         ? "text-primary"
                         : "text-muted-foreground hover:text-primary"
                     }`}
