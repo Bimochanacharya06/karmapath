@@ -1,14 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+
+const isLovableHosted = () => {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return (
+    host.endsWith(".lovable.app") ||
+    host.endsWith(".lovableproject.com") ||
+    host.endsWith(".lovable.dev")
+  );
+};
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -20,23 +31,41 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (result.error) {
-        toast({ title: "Error", description: String(result.error), variant: "destructive" });
+      const redirectUrl = `${window.location.origin}/dashboard`;
+      if (isLovableHosted()) {
+        const result = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: redirectUrl,
+        });
+        if (result.error) {
+          toast({ title: "Error", description: String(result.error), variant: "destructive" });
+          return;
+        }
+        if (result.redirected) return;
+        toast({ title: "🙏 Welcome!", description: "Signed in with Google successfully." });
+        navigate("/dashboard");
         return;
       }
-      if (result.redirected) return;
-      toast({ title: "🙏 Welcome!", description: "Signed in with Google successfully." });
-      navigate("/dashboard");
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Google sign-in failed.", variant: "destructive" });
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectUrl },
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Google sign-in failed.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setGoogleLoading(false);
     }
@@ -46,8 +75,9 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      const trimmedEmail = email.trim();
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
         if (error) throw error;
         toast({ title: "🙏 Welcome back!", description: "You have been signed in successfully." });
         navigate("/dashboard");
@@ -57,15 +87,42 @@ const Auth = () => {
           setLoading(false);
           return;
         }
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { data: { full_name: fullName, phone }, emailRedirectTo: window.location.origin },
+        const trimmedName = fullName.trim();
+        const trimmedPhone = phone.trim();
+        const { data, error } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password,
+          options: {
+            data: { full_name: trimmedName, phone: trimmedPhone || null },
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+          },
         });
         if (error) throw error;
-        toast({ title: "🙏 Account Created!", description: "Check your email to verify your account." });
+        if (data.user?.identities && data.user.identities.length === 0) {
+          toast({
+            title: "Account already exists",
+            description: "An account with this email already exists. Please sign in instead.",
+            variant: "destructive",
+          });
+          setIsLogin(true);
+          return;
+        }
+        if (data.session) {
+          if (trimmedPhone || trimmedName) {
+            await supabase
+              .from("profiles")
+              .update({ full_name: trimmedName, phone: trimmedPhone || null })
+              .eq("user_id", data.session.user.id);
+          }
+          toast({ title: "🙏 Welcome to KarmaPath!", description: "Your account is ready." });
+          navigate("/dashboard");
+        } else {
+          toast({ title: "🙏 Account Created!", description: "Check your email to verify your account." });
+        }
       }
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Something went wrong.", variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Something went wrong.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }

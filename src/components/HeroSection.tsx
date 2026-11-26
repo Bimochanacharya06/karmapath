@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import heroVideo from "@/assets/hero-aarti.mp4.asset.json";
+import heroTemple from "@/assets/hero-temple.jpg";
 
 const floatingItems = [
   { text: "ॐ", x: "10%", y: "20%", delay: 0, size: "text-4xl" },
@@ -13,19 +15,30 @@ const floatingItems = [
 
 const HeroSection = () => {
   const { t } = useLanguage();
+  const [videoFailed, setVideoFailed] = useState(false);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Pashupatinath aarti background — authentic dusk ritual ambience */}
       <div className="absolute inset-0">
-        <video
-          src={heroVideo.url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover"
+        <img
+          src={heroTemple}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
         />
+        {!videoFailed && heroVideo?.url && (
+          <video
+            src={heroVideo.url}
+            poster={heroTemple}
+            autoPlay
+            loop
+            muted
+            playsInline
+            onError={() => setVideoFailed(true)}
+            className="relative w-full h-full object-cover"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-deep-brown/80 via-deep-brown/55 to-deep-brown/95" />
       </div>
 

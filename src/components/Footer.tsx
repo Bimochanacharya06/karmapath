@@ -29,6 +29,8 @@ const Footer = () => {
               {[
                 { label: "Home", to: "/" },
                 { label: "Services", to: "/services" },
+                { label: "Samagri Marketplace", to: "/marketplace" },
+                { label: "Ask AI Pandit", to: "/ask-pandit" },
                 { label: "Blog", to: "/blog" },
                 { label: "Resources", to: "/resources" },
                 { label: "Contact", to: "/contact" },

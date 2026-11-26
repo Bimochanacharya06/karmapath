@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { MapPin, Star, Users, Shield, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const fallbackPandits = [
+interface PanditCard {
+  id: string;
+  name: string;
+  bio: string | null;
+  city: string | null;
+  specializations: string[] | null;
+  rating: number | null;
+  experience_years: number | null;
+  total_ceremonies: number | null;
+}
+
+const fallbackPandits: PanditCard[] = [
   {
     id: "1",
     name: "पण्डित राम प्रसाद शर्मा",
@@ -48,7 +60,7 @@ const fallbackPandits = [
 ];
 
 const PanditSection = () => {
-  const [pandits, setPandits] = useState<any[]>(fallbackPandits);
+  const [pandits, setPandits] = useState<PanditCard[]>(fallbackPandits);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -119,9 +131,12 @@ const PanditSection = () => {
                     <Users className="w-3.5 h-3.5" /> {(p.total_ceremonies || 0).toLocaleString()} {t("pandits.ceremonies")}
                   </span>
                 </div>
-                <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-primary/20 text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+                <Link
+                  to={`/services?pandit=${encodeURIComponent(p.id)}#booking`}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-primary/20 text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
+                >
                   <Phone className="w-3.5 h-3.5" /> {t("pandits.contact")}
-                </button>
+                </Link>
               </div>
             </motion.div>
           ))}

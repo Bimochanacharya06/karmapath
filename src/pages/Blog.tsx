@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Clock, User, Sparkles, Flame, BookOpen, TrendingUp } from "lucide-react";
+import { Calendar, Clock, User, Sparkles, Flame, BookOpen, TrendingUp, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -131,16 +134,32 @@ const blogPosts = [
 const categories = ["All", "Stories", "Festivals", "Mantras", "Rituals", "Behind the Scenes", "Science & Spirit", "Jyotish", "Modern Dharma"];
 
 const trending = [
-  { title: "Tika Muhurta for Dashain 2026", icon: TrendingUp },
-  { title: "How to perform Satyanarayan Puja at home", icon: BookOpen },
-  { title: "Mahamrityunjaya Mantra — 108 times daily?", icon: Flame },
-  { title: "Kundali matching: 36 gunas explained", icon: Sparkles },
+  { title: "Tika Muhurta for Dashain 2026", icon: TrendingUp, postId: 4 },
+  { title: "How to perform Satyanarayan Puja at home", icon: BookOpen, postId: 11 },
+  { title: "Mahamrityunjaya Mantra — 108 times daily?", icon: Flame, postId: 6 },
+  { title: "Kundali matching: 36 gunas explained", icon: Sparkles, postId: 9 },
 ];
+
+type BlogPost = (typeof blogPosts)[number];
 
 const Blog = () => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const { toast } = useToast();
 
   const filtered = activeCategory === "All" ? blogPosts : blogPosts.filter((p) => p.category === activeCategory);
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newsletterEmail.trim();
+    if (!trimmed || !trimmed.includes("@")) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    toast({ title: "🙏 Subscribed!", description: "You'll receive weekly Vedic wisdom and festival updates." });
+    setNewsletterEmail("");
+  };
 
   return (
     <div className="min-h-screen">
@@ -180,53 +199,74 @@ const Blog = () => {
           </div>
 
           {/* Featured Post */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-card rounded-2xl border border-border p-8 md:p-12 mb-12 hover:shadow-elevated transition-all"
-          >
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="text-8xl">{filtered[0]?.image}</div>
-              <div className="flex-1">
-                <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                  {filtered[0]?.category}
-                </span>
-                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mt-3 mb-3">
-                  {filtered[0]?.title}
-                </h2>
-                <p className="text-muted-foreground mb-4">{filtered[0]?.excerpt}</p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {filtered[0]?.author}</span>
-                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {filtered[0]?.date}</span>
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {filtered[0]?.readTime}</span>
+          {filtered[0] && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              onClick={() => setSelectedPost(filtered[0])}
+              className="bg-card rounded-2xl border border-border p-8 md:p-12 mb-12 hover:shadow-elevated hover:border-primary/20 transition-all cursor-pointer group"
+            >
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="text-8xl">{filtered[0].image}</div>
+                <div className="flex-1">
+                  <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+                    {filtered[0].category}
+                  </span>
+                  <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mt-3 mb-3 group-hover:text-primary transition-colors">
+                    {filtered[0].title}
+                  </h2>
+                  <p className="text-muted-foreground mb-4">{filtered[0].excerpt}</p>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {filtered[0].author}</span>
+                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {filtered[0].date}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {filtered[0].readTime}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* Two-column layout: posts grid + trending sidebar */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filtered.slice(1).map((post, i) => (
-                <motion.article
-                  key={post.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.06 }}
-                  className="bg-card rounded-2xl border border-border p-6 hover:shadow-elevated hover:border-primary/20 transition-all group cursor-pointer"
-                >
-                  <div className="text-5xl mb-4">{post.image}</div>
-                  <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">{post.category}</span>
-                  <h3 className="font-display text-lg font-semibold text-foreground mt-3 mb-2 group-hover:text-primary transition-colors">{post.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{post.excerpt}</p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> {post.author}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.readTime}</span>
-                  </div>
-                </motion.article>
-              ))}
+            <div>
+              {filtered.slice(1).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filtered.slice(1).map((post, i) => (
+                    <motion.article
+                      key={post.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.06 }}
+                      onClick={() => setSelectedPost(post)}
+                      className="bg-card rounded-2xl border border-border p-6 hover:shadow-elevated hover:border-primary/20 transition-all group cursor-pointer"
+                    >
+                      <div className="text-5xl mb-4">{post.image}</div>
+                      <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">{post.category}</span>
+                      <h3 className="font-display text-lg font-semibold text-foreground mt-3 mb-2 group-hover:text-primary transition-colors">{post.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{post.excerpt}</p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><User className="w-3 h-3" /> {post.author}</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.readTime}</span>
+                      </div>
+                    </motion.article>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-card rounded-2xl border border-border p-8 text-center">
+                  <p className="text-muted-foreground mb-4">
+                    More articles in <strong>{activeCategory}</strong> are coming soon. Explore all sacred knowledge posts in the meantime.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("All")}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                  >
+                    View all articles <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Trending sidebar */}
@@ -238,7 +278,14 @@ const Blog = () => {
                 </div>
                 <ul className="space-y-3">
                   {trending.map((t, i) => (
-                    <li key={t.title} className="flex items-start gap-3 group cursor-pointer">
+                    <li
+                      key={t.title}
+                      onClick={() => {
+                        const found = blogPosts.find((p) => p.id === t.postId);
+                        if (found) setSelectedPost(found);
+                      }}
+                      className="flex items-start gap-3 group cursor-pointer"
+                    >
                       <span className="font-display text-2xl text-primary/30 font-bold leading-none w-6">{String(i + 1).padStart(2, "0")}</span>
                       <p className="text-sm text-foreground group-hover:text-primary transition-colors leading-snug">{t.title}</p>
                     </li>
@@ -261,15 +308,63 @@ const Blog = () => {
             <p className="text-muted-foreground max-w-lg mx-auto mb-6">
               Get weekly articles on Vedic traditions, festival reminders, and Panchang updates delivered to your inbox.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input type="email" placeholder="your@email.com" className="flex-1 h-11 rounded-lg border border-input bg-background px-4 text-sm" />
-              <button className="h-11 px-6 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all">
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                required
+                className="flex-1 h-11 rounded-lg border border-input bg-background px-4 text-sm"
+              />
+              <button type="submit" className="h-11 px-6 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all">
                 Subscribe
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </section>
+
+      <Dialog open={Boolean(selectedPost)} onOpenChange={(o) => !o && setSelectedPost(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          {selectedPost && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-3xl">{selectedPost.image}</span>
+                  <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+                    {selectedPost.category}
+                  </span>
+                </div>
+                <DialogTitle className="font-display text-2xl leading-snug text-left">
+                  {selectedPost.title}
+                </DialogTitle>
+                <DialogDescription className="flex flex-wrap items-center gap-4 text-xs pt-1">
+                  <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {selectedPost.author}</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {selectedPost.date}</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {selectedPost.readTime}</span>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-2 text-foreground leading-relaxed text-sm md:text-base">
+                <p>{selectedPost.excerpt}</p>
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-sm">
+                  <p className="text-muted-foreground mb-2">
+                    Want personalized guidance on this tradition or ritual from a verified Vedic scholar?
+                  </p>
+                  <div className="flex flex-wrap gap-4">
+                    <Link to="/ask-pandit" className="text-primary font-semibold hover:underline">
+                      Ask AI Pandit →
+                    </Link>
+                    <Link to="/services#booking" className="text-primary font-semibold hover:underline">
+                      Book a Ceremony →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

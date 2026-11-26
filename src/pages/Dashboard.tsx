@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, Clock, CheckCircle, XCircle, Plus, LogOut, User } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -37,10 +37,12 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 const Dashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ full_name: string; phone: string | null } | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ full_name: string | null; phone: string | null } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,7 +56,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       const [{ data: bookingsData }, { data: profileData }] = await Promise.all([
         supabase.from("bookings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("profiles").select("full_name, phone").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("full_name, phone").eq("user_id", user.id).maybeSingle(),
       ]);
       setBookings((bookingsData as Booking[]) || []);
       setProfile(profileData);
@@ -68,9 +70,12 @@ const Dashboard = () => {
       .channel("bookings-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `user_id=eq.${user.id}` }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setBookings((prev) => [payload.new as Booking, ...prev]);
+          const inserted = payload.new as Booking;
+          setBookings((prev) => (prev.some((b) => b.id === inserted.id) ? prev : [inserted, ...prev]));
         } else if (payload.eventType === "UPDATE") {
           setBookings((prev) => prev.map((b) => (b.id === (payload.new as Booking).id ? (payload.new as Booking) : b)));
+        } else if (payload.eventType === "DELETE") {
+          setBookings((prev) => prev.filter((b) => b.id !== (payload.old as { id?: string }).id));
         }
       })
       .subscribe();
@@ -78,7 +83,31 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
+  const handleCancelBooking = async (id: string) => {
+    if (!user) return;
+    setCancellingId(id);
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .eq("user_id", user.id);
+    setCancellingId(null);
+
+    if (error) {
+      toast({ title: "Could not cancel booking", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)));
+    toast({ title: "Booking cancelled", description: "Your ceremony request has been cancelled." });
+  };
+
   if (authLoading || !user) return null;
+
+  const displayName =
+    profile?.full_name ||
+    (typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "") ||
+    "Devotee";
 
   const stats = {
     total: bookings.length,
@@ -95,7 +124,7 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-                🙏 Namaste, {profile?.full_name || "Devotee"}
+                🙏 Namaste, {displayName}
               </h1>
               <p className="text-muted-foreground mt-1">Manage your ceremony bookings and profile</p>
             </div>
@@ -157,7 +186,7 @@ const Dashboard = () => {
                       <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
-                          {format(new Date(booking.preferred_date), "PPP")}
+                          {format(parseISO(booking.preferred_date), "PPP")}
                         </span>
                         {booking.address && (
                           <span className="flex items-center gap-1">📍 {booking.address}</span>
@@ -167,7 +196,18 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
+                      {booking.status === "pending" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={cancellingId === booking.id}
+                          onClick={() => handleCancelBooking(booking.id)}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
+                          {cancellingId === booking.id ? "Cancelling..." : "Cancel"}
+                        </Button>
+                      )}
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${statusColors[booking.status]}`}>
                         {statusIcons[booking.status]}
                         {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}

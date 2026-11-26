@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Search, Calendar, Sparkles, ChevronRight, Flame, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -347,7 +348,7 @@ const Resources = () => {
                 <div className="mt-8 p-5 rounded-xl bg-gradient-warm border border-primary/20 text-center">
                   <Star className="w-5 h-5 text-primary mx-auto mb-2" />
                   <p className="text-sm text-foreground">
-                    Need a Pandit for any of these festivals? <a href="/services#booking" className="text-primary font-medium hover:underline">Book a ceremony →</a>
+                    Need a Pandit for any of these festivals? <Link to="/services#booking" className="text-primary font-medium hover:underline">Book a ceremony →</Link>
                   </p>
                 </div>
               </div>

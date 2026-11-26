@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Sparkles, Loader2, Flower2, Wheat, Droplets, Shirt, Coins, Apple, Flame, Package, Search, MapPin, CheckCircle2, Info } from "lucide-react";
+import { ShoppingBag, Sparkles, Loader2, Flower2, Wheat, Droplets, Shirt, Coins, Apple, Flame, Package, Search, MapPin, CheckCircle2, Info, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +18,7 @@ interface SamagriItem {
   whereToFind: string;
 }
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, LucideIcon> = {
   flowers: Flower2, grains: Wheat, oils: Droplets, fabrics: Shirt,
   metals: Coins, fruits: Apple, spices: Flame, sacred: Sparkles, other: Package,
 };
@@ -68,14 +68,15 @@ const Marketplace = () => {
       } else if (data?.error) {
         setError(data.error);
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to get recommendations. Please try again.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to get recommendations. Please try again.";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const totalEstimate = items.reduce((sum, i) => sum + i.estimatedPriceNPR, 0);
+  const totalEstimate = items.reduce((sum, i) => sum + (Number(i.estimatedPriceNPR) || 0), 0);
   const essentialItems = items.filter((i) => i.essential);
   const optionalItems = items.filter((i) => !i.essential);
 
@@ -120,7 +121,9 @@ const Marketplace = () => {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input type="text" placeholder="Type any ritual name (e.g., Nag Puja, Saraswati Puja)..."
-                    value={customPuja} onChange={(e) => { setCustomPuja(e.target.value); setSelectedPuja(""); }}
+                    value={customPuja}
+                    onChange={(e) => { setCustomPuja(e.target.value); setSelectedPuja(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleSearch(); }}
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
@@ -206,7 +209,7 @@ const Marketplace = () => {
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Price:</span>
-                                <span className="font-display font-bold text-primary">रू {item.estimatedPriceNPR.toLocaleString()}</span>
+                                <span className="font-display font-bold text-primary">रू {(Number(item.estimatedPriceNPR) || 0).toLocaleString()}</span>
                               </div>
                             </div>
                             <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
@@ -249,7 +252,7 @@ const Marketplace = () => {
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Price:</span>
-                                <span className="font-display font-bold text-foreground">रू {item.estimatedPriceNPR.toLocaleString()}</span>
+                                <span className="font-display font-bold text-foreground">रू {(Number(item.estimatedPriceNPR) || 0).toLocaleString()}</span>
                               </div>
                             </div>
                             <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">

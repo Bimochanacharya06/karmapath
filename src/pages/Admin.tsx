@@ -1,24 +1,37 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Calendar, Users, BookOpen, Mail, CheckCircle, Clock, XCircle, Eye } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar, Users, Mail, CheckCircle, XCircle, Eye } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [pandits, setPandits] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Tables<"bookings">[]>([]);
+  const [messages, setMessages] = useState<Tables<"contact_messages">[]>([]);
+  const [pandits, setPandits] = useState<Tables<"pandits">[]>([]);
   const [activeTab, setActiveTab] = useState<"bookings" | "messages" | "pandits">("bookings");
+
+  const fetchData = useCallback(async () => {
+    const [{ data: b }, { data: m }, { data: p }] = await Promise.all([
+      supabase.from("bookings").select("*").order("created_at", { ascending: false }),
+      supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
+      supabase.from("pandits").select("*").order("created_at", { ascending: false }),
+    ]);
+    setBookings(b || []);
+    setMessages(m || []);
+    setPandits(p || []);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -36,26 +49,23 @@ const Admin = () => {
         setChecking(false);
       });
     }
-  }, [user, authLoading]);
-
-  const fetchData = async () => {
-    const [{ data: b }, { data: m }, { data: p }] = await Promise.all([
-      supabase.from("bookings").select("*").order("created_at", { ascending: false }),
-      supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
-      supabase.from("pandits").select("*").order("created_at", { ascending: false }),
-    ]);
-    setBookings(b || []);
-    setMessages(m || []);
-    setPandits(p || []);
-  };
+  }, [user, authLoading, navigate, fetchData]);
 
   const updateBookingStatus = async (id: string, status: "pending" | "confirmed" | "completed" | "cancelled") => {
-    await supabase.from("bookings").update({ status }).eq("id", id);
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
   };
 
   const markMessageRead = async (id: string) => {
-    await supabase.from("contact_messages").update({ is_read: true }).eq("id", id);
+    const { error } = await supabase.from("contact_messages").update({ is_read: true }).eq("id", id);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, is_read: true } : m)));
   };
 
@@ -115,7 +125,7 @@ const Admin = () => {
                     <div>
                       <h3 className="font-display text-lg font-semibold text-foreground">{b.ritual_type}</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {b.contact_name} · {format(new Date(b.preferred_date), "PPP")}
+                        {b.contact_name} · {format(parseISO(b.preferred_date), "PPP")}
                         {b.phone && ` · ${b.phone}`}
                       </p>
                       {b.address && <p className="text-sm text-muted-foreground">📍 {b.address}</p>}

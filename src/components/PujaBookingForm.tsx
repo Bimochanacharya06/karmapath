@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
-import { CalendarIcon, Send, Check, ChevronLeft, ChevronRight, Sparkles, MapPin, User as UserIcon, Star } from "lucide-react";
+import { format, startOfDay } from "date-fns";
+import { CalendarIcon, Send, Check, ChevronLeft, ChevronRight, Sparkles, MapPin, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const ritualOptions = [
   { value: "Namakaran (नामकरण)", icon: "👶", desc: "Sacred naming ceremony, 11th day after birth" },
@@ -47,15 +47,23 @@ const PujaBookingForm = () => {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [pandits, setPandits] = useState<Pandit[]>([]);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    const requestedPandit = searchParams.get("pandit");
     supabase
       .from("pandits")
       .select("id, name, city, experience_years, rating, specializations")
       .eq("verified", true)
       .order("rating", { ascending: false })
-      .then(({ data }) => setPandits(data || []));
-  }, []);
+      .then(({ data }) => {
+        const list = data || [];
+        setPandits(list);
+        if (requestedPandit && list.some((p) => p.id === requestedPandit)) {
+          setPanditId(requestedPandit);
+        }
+      });
+  }, [searchParams]);
 
   const selectedPandit = pandits.find((p) => p.id === panditId);
 
@@ -193,7 +201,7 @@ const PujaBookingForm = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date()} initialFocus className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < startOfDay(new Date())} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
             <p className="text-xs text-muted-foreground">Our Jyotish will confirm the most auspicious Muhurta near this date.</p>

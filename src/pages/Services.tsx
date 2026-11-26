@@ -5,6 +5,7 @@ import {
   CheckCircle, Clock, Star, Users, MapPin, Calendar, ArrowRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PujaBookingForm from "@/components/PujaBookingForm";
@@ -54,7 +55,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.15 } } 
 const item = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { duration: 0.5 } } };
 
 const Services = () => {
-  const [panditsList, setPanditsList] = useState<any[]>([]);
+  const [panditsList, setPanditsList] = useState<Tables<"pandits">[]>([]);
   const [quickBook, setQuickBook] = useState<{ open: boolean; ritual: string; sub: string }>({ open: false, ritual: "", sub: "" });
 
   useEffect(() => {

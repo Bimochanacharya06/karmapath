@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut, LayoutDashboard, ChevronDown, Sparkles } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, ChevronDown, Sparkles, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -21,6 +21,7 @@ const Navbar = () => {
       label: t("nav.explore"),
       href: "#",
       children: [
+        { label: t("nav.marketplace"), href: "/marketplace", icon: ShoppingBag, desc: t("nav.marketplaceDesc") },
         { label: t("nav.askPandit"), href: "/ask-pandit", icon: Sparkles, desc: t("nav.askPanditDesc") },
       ],
     },
@@ -28,6 +29,11 @@ const Navbar = () => {
     { label: t("nav.resources"), href: "/resources" },
     { label: t("nav.contact"), href: "/contact" },
   ];
+
+  useEffect(() => {
+    setOpen(false);
+    setDropdownOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -54,7 +60,9 @@ const Navbar = () => {
                 <div key={link.label} className="relative" ref={dropdownRef}>
                   <button onClick={() => setDropdownOpen(!dropdownOpen)}
                     className={`inline-flex items-center gap-1 text-sm font-medium transition-colors ${
-                      dropdownOpen ? "text-primary" : "text-muted-foreground hover:text-primary"
+                      dropdownOpen || link.children.some((c) => c.href === location.pathname)
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-primary"
                     }`}
                   >
                     {link.label} <ChevronDown className={`w-3.5 h-3.5 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />

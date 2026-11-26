@@ -83,7 +83,10 @@ const AIPanditChat = ({ variant = "panel", onClose }: AIPanditChatProps) => {
 
       while (!done) {
         const { done: d, value } = await reader.read();
-        if (d) break;
+        if (d) {
+          buf += decoder.decode();
+          break;
+        }
         buf += decoder.decode(value, { stream: true });
 
         let nl: number;
@@ -102,6 +105,19 @@ const AIPanditChat = ({ variant = "panel", onClose }: AIPanditChatProps) => {
           } catch {
             buf = line + "\n" + buf;
             break;
+          }
+        }
+      }
+
+      if (!done && buf.trim().startsWith("data: ")) {
+        const json = buf.trim().slice(6).trim();
+        if (json && json !== "[DONE]") {
+          try {
+            const parsed = JSON.parse(json);
+            const c = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (c) upsert(c);
+          } catch {
+            // Ignore incomplete trailing chunk
           }
         }
       }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { CalendarIcon, Send, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -108,7 +108,7 @@ const QuickBookModal = ({ open, onOpenChange, ritual, ritualSubtitle }: QuickBoo
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date()} initialFocus />
+                  <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < startOfDay(new Date())} initialFocus />
                 </PopoverContent>
               </Popover>
             </div>
@@ -116,7 +116,7 @@ const QuickBookModal = ({ open, onOpenChange, ritual, ritualSubtitle }: QuickBoo
               {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</> : <><Send className="w-4 h-4 mr-2" /> Send booking request</>}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              Need more options? <Link to="/services#booking" className="text-primary hover:underline">Use full booking form</Link>
+              Need more options? <Link to="/services#booking" onClick={() => onOpenChange(false)} className="text-primary hover:underline">Use full booking form</Link>
             </p>
           </form>
         )}
