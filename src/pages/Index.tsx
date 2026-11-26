@@ -1,177 +1,160 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Star, Shield, Clock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import PanditSection from "@/components/PanditSection";
-import PuranaQuotes from "@/components/PuranaQuotes";
 import Footer from "@/components/Footer";
+
 import vivahImg from "@/assets/service-vivah.jpg";
 import bratabandhaImg from "@/assets/service-bratabandha.jpg";
+import namakaranImg from "@/assets/service-namakaran.jpg";
+import guphaImg from "@/assets/service-gupha.jpg";
+import pujaImg from "@/assets/service-puja.jpg";
+import shraddhaImg from "@/assets/service-shraddha.jpg";
 
 const Index = () => {
-  const { t } = useLanguage();
-  const [, setPanditCount] = useState(0);
+  const { t, lang } = useLanguage();
+  const [panditCount, setPanditCount] = useState(5);
 
   useEffect(() => {
-    supabase.from("pandits").select("id", { count: "exact", head: true }).eq("verified", true).then(({ count }) => {
-      setPanditCount(count || 0);
-    });
+    supabase
+      .from("pandits")
+      .select("id", { count: "exact", head: true })
+      .eq("verified", true)
+      .then(({ count }) => {
+        if (count) setPanditCount(count);
+      });
   }, []);
 
-  const featured = [
+  const rituals = [
     {
+      id: "vivah",
       img: vivahImg,
-      title: t("ritual.vivah.title"),
-      sub: t("ritual.vivah.sub"),
-      desc: t("ritual.vivah.desc"),
+      title: lang === "ne" ? "विवाह संस्कार" : "Vivah (Wedding)",
+      desc: lang === "ne" ? "कन्यादान, सप्तपदी र पूर्ण वैदिक विवाह अनुष्ठान।" : "Sacred Hindu wedding with Kanyadaan & Saptapadi.",
     },
     {
+      id: "bratabandha",
       img: bratabandhaImg,
-      title: t("ritual.bratabandha.title"),
-      sub: t("ritual.bratabandha.sub"),
-      desc: t("ritual.bratabandha.desc"),
+      title: lang === "ne" ? "ब्रतबन्ध" : "Bratabandha",
+      desc: lang === "ne" ? "जनै धारण र गायत्री मन्त्र दीक्षा संस्कार।" : "Sacred thread initiation & Gayatri Mantra Diksha.",
     },
-  ];
-
-  const testimonials = [
-    { name: "Rajesh Adhikari", location: "Kathmandu", text: "KarmaPath made our son's Bratabandha ceremony seamless. Pt. Ram Prasad ji was exceptional — every mantra, every ritual performed with devotion.", rating: 5 },
-    { name: "Sunita Shrestha", location: "Lalitpur", text: "We used KarmaPath for our Griha Pravesh. The pandit arrived on time, explained every step, and made the ceremony truly memorable for our family.", rating: 5 },
-    { name: "Deepak Sharma", location: "Pokhara", text: "Booking my father's Shraddha ceremony was emotional, but KarmaPath handled everything with sensitivity and respect. Highly recommended.", rating: 5 },
+    {
+      id: "namakaran",
+      img: namakaranImg,
+      title: lang === "ne" ? "नामकरण (न्वारन)" : "Namakaran",
+      desc: lang === "ne" ? "नक्षत्र अनुसार शुभ नाम र जन्म कुण्डली।" : "Auspicious 11th-day naming & Janam Kundali.",
+    },
+    {
+      id: "gupha",
+      img: guphaImg,
+      title: lang === "ne" ? "गुफा राख्ने / इही" : "Ihi & Bahra",
+      desc: lang === "ne" ? "नेवार परम्परा अनुसार बेल विवाह र सूर्य दर्शन।" : "Traditional Newar Bel Bibaha & Surya Darshan.",
+    },
+    {
+      id: "puja",
+      img: pujaImg,
+      title: lang === "ne" ? "गृह प्रवेश र पूजा" : "Griha Pravesh & Puja",
+      desc: lang === "ne" ? "वास्तु शान्ति, रुद्री पाठ र सत्यनारायण कथा।" : "Housewarming Vastu Shanti, Rudri & Satyanarayan.",
+    },
+    {
+      id: "shraddha",
+      img: shraddhaImg,
+      title: lang === "ne" ? "श्राद्ध कर्म" : "Shraddha Karma",
+      desc: lang === "ne" ? "तिथि श्राद्ध, पिण्डदान र पितृ तर्पण विधि।" : "Ancestral Tithi Shraddha, Pinda Daan & Tarpan.",
+    },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <HeroSection />
+      <HeroSection panditCount={panditCount} />
 
-      {/* Featured 2 Rituals */}
-      <section className="py-24 bg-gradient-warm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-primary font-display text-sm tracking-widest uppercase mb-2">{t("featured.eyebrow")}</p>
-            <h2 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-4">{t("featured.title")}</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">{t("featured.subtitle")}</p>
+      {/* Core Ceremonies — Clean 6-Card Minimal Grid */}
+      <section className="py-20 bg-background">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
+            <div>
+              <p className="text-primary text-xs font-semibold tracking-widest uppercase mb-2">
+                {t("featured.eyebrow")}
+              </p>
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+                {t("featured.title")}
+              </h2>
+            </div>
+            <Link
+              to="/services"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all"
+            >
+              {t("featured.viewAll")} <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {featured.map((f, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {rituals.map((r, i) => (
               <motion.div
-                key={f.sub}
-                initial={{ opacity: 0, y: 30 }}
+                key={r.id}
+                initial={{ opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                className="group bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all border border-border hover:border-primary/30"
+                transition={{ delay: i * 0.05 }}
+                className="group bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/35 hover:shadow-elevated transition-all"
               >
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  <img src={f.img} alt={f.sub} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-deep-brown/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-5">
-                    <h3 className="font-display text-3xl text-cream font-bold drop-shadow-lg">{f.title}</h3>
-                    <p className="text-saffron text-sm font-medium">{f.sub}</p>
-                  </div>
+                <div className="aspect-[16/10] overflow-hidden">
+                  <img
+                    src={r.img}
+                    alt={r.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
                 </div>
-                <div className="p-6">
-                  <p className="text-muted-foreground mb-5 leading-relaxed">{f.desc}</p>
-                  <Link to="/services#booking" className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all">
-                    {t("featured.bookNow")} <ArrowRight className="w-4 h-4" />
+                <div className="p-5">
+                  <h3 className="font-display text-xl font-bold text-foreground mb-1.5">{r.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{r.desc}</p>
+                  <Link
+                    to="/services#booking"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary group-hover:gap-2.5 transition-all"
+                  >
+                    {t("featured.bookNow")} <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </motion.div>
             ))}
           </div>
-
-          <div className="text-center mt-12">
-            <Link to="/services" className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all shadow-warm">
-              {t("featured.viewAll")} <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </div>
       </section>
 
-      {/* Our Pandits — directly after rituals */}
+      {/* Verified Pandits */}
       <PanditSection />
 
-      {/* Why KarmaPath */}
-      <section className="py-24 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-4">
-              {t("why.title1")} <span className="text-gradient-saffron">KarmaPath</span>
+      {/* Clean Minimal CTA */}
+      <section className="py-20 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="rounded-3xl bg-card border border-border shadow-elevated p-8 sm:p-12 text-center">
+            <h2 className="font-display text-2xl sm:text-4xl font-bold text-foreground mb-3">
+              {t("cta.title")}
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">{t("why.subtitle")}</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: Shield, title: t("why.card1.title"), desc: t("why.card1.desc") },
-              { icon: Clock, title: t("why.card2.title"), desc: t("why.card2.desc") },
-              { icon: Star, title: t("why.card3.title"), desc: t("why.card3.desc") },
-            ].map((f) => (
-              <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                className="bg-card rounded-2xl p-8 border border-border hover:shadow-elevated transition-all">
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
-                  <f.icon className="w-7 h-7 text-primary" />
-                </div>
-                <h3 className="font-display text-xl font-semibold text-foreground mb-3">{f.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{f.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Purana Quotes */}
-      <PuranaQuotes />
-
-      {/* Testimonials */}
-      <section className="py-24 bg-gradient-warm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <p className="text-primary font-display text-sm tracking-widest uppercase mb-2">{t("testimonials.eyebrow")}</p>
-            <h2 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-4">{t("testimonials.title")}</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((tm, i) => (
-              <motion.div
-                key={tm.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-card rounded-2xl p-7 border border-border"
+            <p className="text-muted-foreground text-base mb-8 max-w-lg mx-auto">
+              {t("cta.subtitle")}
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Link
+                to="/services#booking"
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all shadow-warm"
               >
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: tm.rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-foreground mb-4 leading-relaxed italic">"{tm.text}"</p>
-                <div>
-                  <p className="font-display font-semibold text-foreground">{tm.name}</p>
-                  <p className="text-sm text-muted-foreground">{tm.location}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24 bg-deep-brown">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="font-display text-3xl md:text-5xl font-bold text-cream mb-6">{t("cta.title")}</h2>
-          <p className="text-warm-stone text-lg mb-10 max-w-2xl mx-auto">{t("cta.subtitle")}</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/services#booking" className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all">
-              {t("cta.bookPuja")}
-            </Link>
-            <Link to="/resources" className="inline-flex items-center justify-center px-8 py-4 rounded-lg border-2 border-cream/30 text-cream font-semibold hover:bg-cream/10 transition-all">
-              {t("cta.exploreResources")}
-            </Link>
+                {t("cta.bookPuja")} <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/resources"
+                className="inline-flex items-center px-7 py-3.5 rounded-full border border-border text-foreground text-sm font-semibold hover:border-primary/40 hover:text-primary transition-colors"
+              >
+                {t("cta.exploreResources")}
+              </Link>
+            </div>
           </div>
         </div>
       </section>

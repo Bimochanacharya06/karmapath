@@ -1,364 +1,206 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Calendar, Clock, User, Sparkles, Flame, BookOpen, TrendingUp, ArrowRight } from "lucide-react";
+import { Clock, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import vishwaroopImg from "@/assets/hero-krishna-vishwaroop.jpg";
+import vivahImg from "@/assets/service-vivah.jpg";
+import bratabandhaImg from "@/assets/service-bratabandha.jpg";
+import pujaImg from "@/assets/service-puja.jpg";
+import guphaImg from "@/assets/service-gupha.jpg";
+import shraddhaImg from "@/assets/service-shraddha.jpg";
 
 const blogPosts = [
   {
     id: 1,
-    title: "Why Lord Krishna Revealed His Vishwaroop to Arjuna — and What It Teaches Us Today",
-    excerpt: "On the battlefield of Kurukshetra, Arjuna trembled as Krishna unveiled his Vishwaroop — a thousand suns blazing, all of creation contained in one form. Beyond the mythology lies a profound psychological lesson: surrender, perspective, and the courage to act without attachment to outcome. Pt. Ram Prasad unpacks Chapter 11 of the Bhagavad Gita and what it means for modern dharma.",
-    date: "2026-04-18",
-    readTime: "9 min read",
+    img: vishwaroopImg,
+    categoryNe: "शास्त्र कथा",
+    categoryEn: "Stories",
+    titleNe: "कुरुक्षेत्रमा श्रीकृष्णको विश्वरूप दर्शन र यसको सन्देश",
+    titleEn: "Why Lord Krishna Revealed His Vishwaroop to Arjuna",
+    excerptNe:
+      "श्रीमद्भगवद्गीताको ११ औं अध्यायमा भगवान् श्रीकृष्णले अर्जुनलाई देखाउनुभएको विश्वरूपले कर्म, समर्पण र धर्मको गहिरो अर्थ सिकाउँछ।",
+    excerptEn:
+      "On the battlefield of Kurukshetra, Krishna unveiled His Vishwaroop — teaching surrender, perspective, and fearless dharma without attachment to outcome.",
     author: "Pt. Ram Prasad Sharma",
-    category: "Stories",
-    image: "🌌",
-    featured: true,
+    readTime: "6 min",
   },
   {
     id: 2,
-    title: "A Day in the Life of a Kathmandu Pandit — From 4 AM Sandhya to Midnight Havan",
-    excerpt: "Ever wondered what a working Pandit's day actually looks like? We followed Pt. Keshav Acharya for 24 hours — from his pre-dawn Brahma Muhurta meditation, three back-to-back Satyanarayan Pujas in Bhaktapur, navigating Kathmandu traffic with his samagri kit, to a late-night Naam Karan in Patan. Raw, real, and surprisingly funny.",
-    date: "2026-04-12",
-    readTime: "11 min read",
-    author: "KarmaPath Team",
-    category: "Behind the Scenes",
-    image: "🌅",
+    img: pujaImg,
+    categoryNe: "पूजा विज्ञान",
+    categoryEn: "Rituals",
+    titleNe: "हवनमा शुद्ध घिउ र जडीबुटी आहुति दिनुको महत्व",
+    titleEn: "The Sacred Science Behind Vedic Havan & Herbs",
+    excerptNe:
+      "हवनमा प्रयोग हुने श्रीखण्ड, गुग्गुल, कपुर र घिउको आहुतिले वातावरण शुद्ध राख्नुका साथै मनमा गहिरो शान्ति प्रदान गर्छ।",
+    excerptEn:
+      "Sandalwood, camphor, sesame, and pure cow ghee offered into Agni purify the home atmosphere while centering the family's focus.",
+    author: "Dr. Anjali Pant",
+    readTime: "5 min",
   },
   {
     id: 3,
-    title: "The Hidden Science of Havan: Why Burning Ghee & Herbs Actually Works",
-    excerpt: "IIT-BHU researchers measured air quality during a 90-minute Agnihotra and found a 96% reduction in airborne bacteria. The samagri — sandalwood, guggul, camphor, mango bark — releases formaldehyde-neutralizing compounds. Ancient Rishis called it shuddhi; modern science calls it antimicrobial fumigation. Here's the data behind the smoke.",
-    date: "2026-04-05",
-    readTime: "10 min read",
-    author: "Dr. Anjali Pant",
-    category: "Science & Spirit",
-    image: "🔥",
+    img: bratabandhaImg,
+    categoryNe: "मन्त्र ज्ञान",
+    categoryEn: "Mantras",
+    titleNe: "गायत्री मन्त्रको अर्थ र जप गर्ने सही विधि",
+    titleEn: "Decoding the Gayatri Mantra — Meaning & Practice",
+    excerptNe:
+      "२४ अक्षरको गायत्री मन्त्र वैदिक परम्पराको मूल आधार हो। पूर्व फर्किएर शान्त चित्तले जप गर्नाले बुद्धि र एकाग्रता बढ्छ।",
+    excerptEn:
+      "Twenty-four sacred syllables chanted at sunrise to illuminate intellect and align daily life with clarity and truth.",
+    author: "Pt. Keshav Acharya",
+    readTime: "7 min",
   },
   {
     id: 4,
-    title: "Dashain 2026: Tika Muhurta, Jamara Sowing & the Real Story of Durga's Victory",
-    excerpt: "Most of us receive Tika without knowing why. The 15-day Bada Dashain commemorates Goddess Durga's nine-night battle with Mahishasura — a buffalo demon who had a boon making him invincible to men and gods. Learn the auspicious 2082 BS Tika Muhurta, why Jamara is sown on Ghatasthapana, and the right way to receive blessings from elders.",
-    date: "2026-03-28",
-    readTime: "8 min read",
+    img: guphaImg,
+    categoryNe: "संस्कृति",
+    categoryEn: "Heritage",
+    titleNe: "नेवार संस्कृतिमा इही (बेल विवाह) र गुफा परम्परा",
+    titleEn: "The Newar Ihi Ceremony & Bel Bibaha Tradition",
+    excerptNe:
+      "काठमाडौं उपत्यकाको मौलिक इही र बाह्रा संस्कारले बालिकालाई जीवनभर सम्मान, सुरक्षा र आध्यात्मिक शक्ति प्रदान गर्छ।",
+    excerptEn:
+      "Exploring the centuries-old Kathmandu Valley tradition of Bel Bibaha and the 12-day Surya Darshan coming-of-age ceremony.",
     author: "Pt. Vishnu Dev Pant",
-    category: "Festivals",
-    image: "🌾",
+    readTime: "6 min",
   },
   {
     id: 5,
-    title: "I Performed My Father's Shraddha for the First Time. Here's What No One Told Me.",
-    excerpt: "A first-person account from Deepak, a software engineer in Pokhara, on conducting his father's annual Shraddha. The unexpected weight of holding the Pinda. The crow that wouldn't come, then suddenly did. The moment the Pandit's mantra cracked something open in him. A meditation on grief, ritual, and the strange comfort of doing exactly what our ancestors did.",
-    date: "2026-03-22",
-    readTime: "7 min read",
-    author: "Deepak Sharma (Guest)",
-    category: "Stories",
-    image: "🪔",
+    img: vivahImg,
+    categoryNe: "संस्कार",
+    categoryEn: "Rituals",
+    titleNe: "वैदिक विवाहमा सप्तपदीका सात वचनहरूको अर्थ",
+    titleEn: "Seven Sacred Steps: Meaning of Saptapadi in Vivah",
+    excerptNe:
+      "पवित्र अग्निलाई साक्षी राखेर चालिने सात पाइलाले दाम्पत्य जीवनको मित्रता, विश्वास र साझा धर्मलाई जनाउँछ।",
+    excerptEn:
+      "Each step around the sacred fire represents a lifelong vow of nourishment, strength, harmony, and shared spiritual growth.",
+    author: "Pt. Ram Prasad Sharma",
+    readTime: "5 min",
   },
   {
     id: 6,
-    title: "Decoding the Gayatri Mantra — Word by Word, Syllable by Syllable",
-    excerpt: "ॐ भूर्भुवः स्वः... 24 syllables, three lines, one of the most powerful mantras in the Vedic canon. We break down each word — what 'Tat Savitur Varenyam' really means, why it's chanted facing the Sun, and the neuroscience of its 7.83 Hz resonance with Earth's Schumann frequency. The mantra you've heard a thousand times, finally understood.",
-    date: "2026-03-15",
-    readTime: "12 min read",
-    author: "Pt. Keshav Acharya",
-    category: "Mantras",
-    image: "🕉️",
-  },
-  {
-    id: 7,
-    title: "Bratabandha at 12 vs 25: Does Age Still Matter for the Sacred Thread?",
-    excerpt: "Traditionally performed between 8–16 years, Bratabandha is increasingly being done in adulthood — sometimes at 30 or even 50. Is it still valid? Pandits across Nepal weigh in on the shifting cultural meaning of Upanayana, why Gen-Z is reclaiming it, and what changes (and what doesn't) when you take Gayatri Diksha as an adult.",
-    date: "2026-03-08",
-    readTime: "8 min read",
-    author: "KarmaPath Team",
-    category: "Modern Dharma",
-    image: "📿",
-  },
-  {
-    id: 8,
-    title: "Tihar's 5 Days, Decoded: From Kaag Tihar to Bhai Tika",
-    excerpt: "Day 1 we worship crows. Day 2, dogs. Day 3, cows and Lakshmi. Day 4, the self (Mha Puja for Newars) or Govardhan. Day 5, brothers. Each day's logic traces back to a specific Puranic story — the crow as Yama's messenger, the dog as Bhairav's guardian. A complete walkthrough of why Tihar is the deepest 5-day theology in the Hindu year.",
-    date: "2026-03-01",
-    readTime: "10 min read",
+    img: shraddhaImg,
+    categoryNe: "पितृ धर्म",
+    categoryEn: "Tradition",
+    titleNe: "श्राद्ध र तर्पण: पितृहरूप्रति कृतज्ञताको पर्व",
+    titleEn: "Understanding Shraddha & Ancestral Gratitude",
+    excerptNe:
+      "आफ्ना पुर्खाहरूको सम्झनामा श्रद्धापूर्वक गरिने तर्पण र पिण्डदानले पुस्ताबीचको संस्कारलाई जोगाइराख्छ।",
+    excerptEn:
+      "How annual Tithi Shraddha and Tarpan honor family lineage with humility, mindfulness, and reverence.",
     author: "Pt. Hari Datta Upadhyay",
-    category: "Festivals",
-    image: "🪔",
+    readTime: "5 min",
   },
-  {
-    id: 9,
-    title: "Mangal Dosh, Shani Sade Sati & Kaal Sarp: Are Astrological Doshas Real?",
-    excerpt: "Every Nepali family has heard 'don't marry her, she has Mangal Dosh' or 'his Sade Sati is starting'. We sat down with three respected Jyotish acharyas and a skeptic astrophysicist to ask: where does the math come from? What do the remedies actually do? And how do you know if your Pandit is reading your chart correctly?",
-    date: "2026-02-22",
-    readTime: "13 min read",
-    author: "KarmaPath Team",
-    category: "Jyotish",
-    image: "♈",
-  },
-  {
-    id: 10,
-    title: "Inside Pashupatinath at 4 AM: The Mangal Aarti Most Devotees Never See",
-    excerpt: "While Kathmandu sleeps, the Bhatta priests of Pashupatinath perform the Mangal Aarti — the first awakening of Lord Shiva. We were granted rare access to document the ritual: the bathing of the Jyotirlinga in milk, honey, and Bel patra, the chanting of the Rudri, the lighting of the 108 lamps. Photo essay + audio.",
-    date: "2026-02-14",
-    readTime: "6 min read",
-    author: "KarmaPath Team",
-    category: "Behind the Scenes",
-    image: "🛕",
-  },
-  {
-    id: 11,
-    title: "Why We Boil Milk Until It Overflows During Griha Pravesh",
-    excerpt: "It looks like a small thing — placing a pot of milk on the new stove and letting it spill over the rim. But this single act carries layers of meaning: prosperity overflowing into every direction, the kitchen as the heart of the home, an offering to the Vastu Purusha. The Vedic logic behind one of Nepal's most beloved Griha Pravesh moments.",
-    date: "2026-02-07",
-    readTime: "5 min read",
-    author: "Pt. Ram Prasad Sharma",
-    category: "Rituals",
-    image: "🥛",
-  },
-  {
-    id: 12,
-    title: "The Newar Ihi Ceremony: When a 7-Year-Old Marries a Bel Fruit",
-    excerpt: "In Newar tradition, every girl is married three times — first to the Bel fruit (representing Lord Vishnu) during Ihi, then to the Sun during Bahra, and finally to her human husband. The result? A girl is technically never a widow. We explore the brilliant feminist theology hidden inside a centuries-old Kathmandu Valley ritual.",
-    date: "2026-01-30",
-    readTime: "9 min read",
-    author: "Pt. Vishnu Dev Pant",
-    category: "Stories",
-    image: "🌸",
-  },
-];
-
-const categories = ["All", "Stories", "Festivals", "Mantras", "Rituals", "Behind the Scenes", "Science & Spirit", "Jyotish", "Modern Dharma"];
-
-const trending = [
-  { title: "Tika Muhurta for Dashain 2026", icon: TrendingUp, postId: 4 },
-  { title: "How to perform Satyanarayan Puja at home", icon: BookOpen, postId: 11 },
-  { title: "Mahamrityunjaya Mantra — 108 times daily?", icon: Flame, postId: 6 },
-  { title: "Kundali matching: 36 gunas explained", icon: Sparkles, postId: 9 },
 ];
 
 type BlogPost = (typeof blogPosts)[number];
 
 const Blog = () => {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const { lang } = useLanguage();
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const { toast } = useToast();
-
-  const filtered = activeCategory === "All" ? blogPosts : blogPosts.filter((p) => p.category === activeCategory);
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newsletterEmail.trim();
-    if (!trimmed || !trimmed.includes("@")) {
-      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
-      return;
-    }
-    toast({ title: "🙏 Subscribed!", description: "You'll receive weekly Vedic wisdom and festival updates." });
-    setNewsletterEmail("");
-  };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <section className="pt-24 pb-16 bg-gradient-warm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-primary font-display text-sm tracking-widest uppercase mb-2">
-            ज्ञान
-          </motion.p>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="font-display text-4xl md:text-6xl font-bold text-foreground mb-4">
-            Sacred <span className="text-gradient-saffron">Knowledge</span> Blog
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            In-depth articles on Hindu Karmakanda traditions, Vedic wisdom, ritual guides, and Nepali cultural heritage — written by experienced Pandits and scholars.
-          </motion.p>
+      <section className="pt-28 pb-12 bg-gradient-warm">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <p className="text-primary text-xs font-semibold tracking-widest uppercase mb-2">
+            {lang === "ne" ? "वैदिक लेखहरू" : "Sacred Articles"}
+          </p>
+          <h1 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-3">
+            {lang === "ne" ? "धर्म, संस्कार र ज्ञान" : "Vedic Wisdom Blog"}
+          </h1>
+          <p className="text-muted-foreground text-base">
+            {lang === "ne"
+              ? "नेपाली वैदिक परम्परा, मन्त्र र संस्कारसम्बन्धी संक्षिप्त लेखहरू।"
+              : "Concise reflections on Vedic rituals, mantras, and Nepali heritage."}
+          </p>
         </div>
       </section>
 
-      <section className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2 mb-12 justify-center">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2 rounded-full text-sm font-medium border transition-all ${
-                  activeCategory === cat
-                    ? "bg-primary/10 text-primary border-primary/20"
-                    : "border-border hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+      <section className="py-14 flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blogPosts.map((post) => {
+              const title = lang === "ne" ? post.titleNe : post.titleEn;
+              const excerpt = lang === "ne" ? post.excerptNe : post.excerptEn;
+              const category = lang === "ne" ? post.categoryNe : post.categoryEn;
 
-          {/* Featured Post */}
-          {filtered[0] && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              onClick={() => setSelectedPost(filtered[0])}
-              className="bg-card rounded-2xl border border-border p-8 md:p-12 mb-12 hover:shadow-elevated hover:border-primary/20 transition-all cursor-pointer group"
-            >
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div className="text-8xl">{filtered[0].image}</div>
-                <div className="flex-1">
-                  <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                    {filtered[0].category}
-                  </span>
-                  <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mt-3 mb-3 group-hover:text-primary transition-colors">
-                    {filtered[0].title}
-                  </h2>
-                  <p className="text-muted-foreground mb-4">{filtered[0].excerpt}</p>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {filtered[0].author}</span>
-                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {filtered[0].date}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {filtered[0].readTime}</span>
+              return (
+                <article
+                  key={post.id}
+                  onClick={() => setSelectedPost(post)}
+                  className="group bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/35 hover:shadow-elevated transition-all cursor-pointer flex flex-col"
+                >
+                  <div className="aspect-[16/10] overflow-hidden">
+                    <img
+                      src={post.img}
+                      alt={title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
                   </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Two-column layout: posts grid + trending sidebar */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
-            <div>
-              {filtered.slice(1).length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filtered.slice(1).map((post, i) => (
-                    <motion.article
-                      key={post.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.06 }}
-                      onClick={() => setSelectedPost(post)}
-                      className="bg-card rounded-2xl border border-border p-6 hover:shadow-elevated hover:border-primary/20 transition-all group cursor-pointer"
-                    >
-                      <div className="text-5xl mb-4">{post.image}</div>
-                      <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">{post.category}</span>
-                      <h3 className="font-display text-lg font-semibold text-foreground mt-3 mb-2 group-hover:text-primary transition-colors">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{post.excerpt}</p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><User className="w-3 h-3" /> {post.author}</span>
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.readTime}</span>
-                      </div>
-                    </motion.article>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-card rounded-2xl border border-border p-8 text-center">
-                  <p className="text-muted-foreground mb-4">
-                    More articles in <strong>{activeCategory}</strong> are coming soon. Explore all sacred knowledge posts in the meantime.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveCategory("All")}
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-                  >
-                    View all articles <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Trending sidebar */}
-            <aside className="space-y-6">
-              <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  <h3 className="font-display text-lg font-semibold text-foreground">Trending now</h3>
-                </div>
-                <ul className="space-y-3">
-                  {trending.map((t, i) => (
-                    <li
-                      key={t.title}
-                      onClick={() => {
-                        const found = blogPosts.find((p) => p.id === t.postId);
-                        if (found) setSelectedPost(found);
-                      }}
-                      className="flex items-start gap-3 group cursor-pointer"
-                    >
-                      <span className="font-display text-2xl text-primary/30 font-bold leading-none w-6">{String(i + 1).padStart(2, "0")}</span>
-                      <p className="text-sm text-foreground group-hover:text-primary transition-colors leading-snug">{t.title}</p>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 pt-6 border-t border-border">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Quick read</p>
-                  <p className="text-sm text-foreground italic leading-relaxed">
-                    "धर्म एव हतो हन्ति, धर्मो रक्षति रक्षितः।"
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">— Manusmriti 8.15: Dharma destroys those who destroy it; dharma protects those who protect it.</p>
-                </div>
-              </div>
-            </aside>
-          </div>
-
-          {/* Newsletter CTA */}
-          <div className="mt-16 bg-card rounded-2xl border border-border p-8 md:p-12 text-center">
-            <h3 className="font-display text-2xl font-bold text-foreground mb-3">📩 Stay Connected with Dharma</h3>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-6">
-              Get weekly articles on Vedic traditions, festival reminders, and Panchang updates delivered to your inbox.
-            </p>
-            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="your@email.com"
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                required
-                className="flex-1 h-11 rounded-lg border border-input bg-background px-4 text-sm"
-              />
-              <button type="submit" className="h-11 px-6 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all">
-                Subscribe
-              </button>
-            </form>
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+                        {category}
+                      </span>
+                      <h2 className="font-display text-lg font-bold text-foreground mt-2.5 mb-2 group-hover:text-primary transition-colors">
+                        {title}
+                      </h2>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{excerpt}</p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border">
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" /> {post.author}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {post.readTime}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
 
       <Dialog open={Boolean(selectedPost)} onOpenChange={(o) => !o && setSelectedPost(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl">
           {selectedPost && (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl">{selectedPost.image}</span>
-                  <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                    {selectedPost.category}
-                  </span>
-                </div>
                 <DialogTitle className="font-display text-2xl leading-snug text-left">
-                  {selectedPost.title}
+                  {lang === "ne" ? selectedPost.titleNe : selectedPost.titleEn}
                 </DialogTitle>
-                <DialogDescription className="flex flex-wrap items-center gap-4 text-xs pt-1">
-                  <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {selectedPost.author}</span>
-                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {selectedPost.date}</span>
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {selectedPost.readTime}</span>
+                <DialogDescription className="flex items-center gap-4 text-xs pt-1">
+                  <span>{selectedPost.author}</span>
+                  <span>·</span>
+                  <span>{selectedPost.readTime}</span>
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 pt-2 text-foreground leading-relaxed text-sm md:text-base">
-                <p>{selectedPost.excerpt}</p>
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-sm">
-                  <p className="text-muted-foreground mb-2">
-                    Want personalized guidance on this tradition or ritual from a verified Vedic scholar?
-                  </p>
-                  <div className="flex flex-wrap gap-4">
-                    <Link to="/ask-pandit" className="text-primary font-semibold hover:underline">
-                      Ask AI Pandit →
-                    </Link>
-                    <Link to="/services#booking" className="text-primary font-semibold hover:underline">
-                      Book a Ceremony →
-                    </Link>
-                  </div>
+              <div className="space-y-4 pt-2 text-sm sm:text-base text-foreground leading-relaxed">
+                <img
+                  src={selectedPost.img}
+                  alt=""
+                  className="w-full h-48 object-cover rounded-xl border border-border"
+                />
+                <p>{lang === "ne" ? selectedPost.excerptNe : selectedPost.excerptEn}</p>
+                <div className="pt-2 flex flex-wrap gap-4 text-sm">
+                  <Link to="/ask-pandit" className="text-primary font-semibold hover:underline">
+                    {lang === "ne" ? "AI पण्डितलाई सोध्नुहोस् →" : "Ask AI Pandit →"}
+                  </Link>
+                  <Link to="/services#booking" className="text-primary font-semibold hover:underline">
+                    {lang === "ne" ? "पूजा बुक गर्नुहोस् →" : "Book a Ceremony →"}
+                  </Link>
                 </div>
               </div>
             </>

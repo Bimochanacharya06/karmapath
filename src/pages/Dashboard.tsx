@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -37,6 +38,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 const Dashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
+  const { lang } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -124,16 +126,20 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-                🙏 Namaste, {displayName}
+                🙏 {lang === "ne" ? `नमस्ते, ${displayName}` : `Namaste, ${displayName}`}
               </h1>
-              <p className="text-muted-foreground mt-1">Manage your ceremony bookings and profile</p>
+              <p className="text-muted-foreground mt-1">
+                {lang === "ne" ? "तपाईंका पूजा बुकिङहरूको विवरण" : "Manage your ceremony bookings"}
+              </p>
             </div>
             <div className="flex gap-3">
               <Link to="/services#booking">
-                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> New Booking</Button>
+                <Button size="sm" className="rounded-full">
+                  <Plus className="w-4 h-4 mr-1" /> {lang === "ne" ? "नयाँ बुकिङ" : "New Booking"}
+                </Button>
               </Link>
-              <Button variant="outline" size="sm" onClick={signOut}>
-                <LogOut className="w-4 h-4 mr-1" /> Sign Out
+              <Button variant="outline" size="sm" className="rounded-full" onClick={signOut}>
+                <LogOut className="w-4 h-4 mr-1" /> {lang === "ne" ? "साइन आउट" : "Sign Out"}
               </Button>
             </div>
           </div>

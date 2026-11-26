@@ -1,14 +1,12 @@
 import { useState } from "react";
-import { format, startOfDay } from "date-fns";
-import { CalendarIcon, Send, Check, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { Send, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
@@ -16,108 +14,154 @@ interface QuickBookModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ritual: string;
-  ritualSubtitle?: string;
 }
 
-const QuickBookModal = ({ open, onOpenChange, ritual, ritualSubtitle }: QuickBookModalProps) => {
+const QuickBookModal = ({ open, onOpenChange, ritual }: QuickBookModalProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [date, setDate] = useState<Date>();
+  const [preferredDate, setPreferredDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
   const reset = () => {
-    setName(""); setPhone(""); setDate(undefined); setDone(false);
+    setName("");
+    setPhone("");
+    setPreferredDate("");
+    setDone(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to book a ceremony.", variant: "destructive" });
-      return;
-    }
-    if (!name || !phone || !date) {
-      toast({ title: "Missing info", description: "Please fill name, phone and date.", variant: "destructive" });
+    if (!user) return;
+    if (!name.trim() || !phone.trim() || !preferredDate) {
+      toast({
+        title: lang === "ne" ? "विवरण भर्नुहोस्" : "Missing info",
+        description: lang === "ne" ? "नाम, फोन र मिति आवश्यक छ।" : "Please fill name, phone and date.",
+        variant: "destructive",
+      });
       return;
     }
     setSubmitting(true);
     const { error } = await supabase.from("bookings").insert({
       user_id: user.id,
       ritual_type: ritual,
-      contact_name: name,
-      phone,
-      preferred_date: format(date, "yyyy-MM-dd"),
+      contact_name: name.trim(),
+      phone: phone.trim(),
+      preferred_date: preferredDate,
       status: "pending",
     });
     setSubmitting(false);
     if (error) {
-      toast({ title: "Booking failed", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
     setDone(true);
-    toast({ title: "Booking received 🙏", description: "Our team will contact you to confirm details." });
+    toast({
+      title: lang === "ne" ? "बुकिङ प्राप्त भयो 🙏" : "Booking received 🙏",
+      description: lang === "ne" ? "हामी चाँडै सम्पर्क गर्नेछौं।" : "Our team will call you to confirm.",
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setTimeout(reset, 250); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) setTimeout(reset, 250);
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl">Quick Book</DialogTitle>
+          <DialogTitle className="font-display text-2xl">
+            {lang === "ne" ? "तुरुन्त बुकिङ" : "Quick Book"}
+          </DialogTitle>
           <DialogDescription>
             <span className="text-foreground font-medium">{ritual}</span>
-            {ritualSubtitle && <span className="text-muted-foreground"> — {ritualSubtitle}</span>}
-            <br />Just the essentials — we'll confirm the rest by phone.
           </DialogDescription>
         </DialogHeader>
 
         {done ? (
           <div className="py-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Check className="w-7 h-7 text-primary" />
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <Check className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="font-display text-lg font-semibold text-foreground mb-1">Request received</h3>
-            <p className="text-sm text-muted-foreground mb-4">A KarmaPath coordinator will call you within 24 hours.</p>
-            <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">Close</Button>
+            <h3 className="font-display text-lg font-bold text-foreground mb-1">
+              {lang === "ne" ? "अनुरोध पठाइयो" : "Request received"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {lang === "ne" ? "हामी २४ घण्टाभित्र फोनमार्फत पक्का गर्नेछौं।" : "We will call within 24 hours."}
+            </p>
+            <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full rounded-full">
+              {lang === "ne" ? "बन्द गर्नुहोस्" : "Close"}
+            </Button>
           </div>
         ) : !user ? (
           <div className="py-4 text-center">
-            <p className="text-muted-foreground text-sm mb-4">Please sign in to send a booking request.</p>
-            <Link to="/auth" className="inline-flex items-center justify-center w-full h-10 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all">
-              Sign in to continue
+            <p className="text-muted-foreground text-sm mb-4">
+              {lang === "ne" ? "बुक गर्न कृपया साइन इन गर्नुहोस्।" : "Please sign in to send a booking request."}
+            </p>
+            <Link
+              to="/auth"
+              className="inline-flex items-center justify-center w-full h-10 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all"
+            >
+              {lang === "ne" ? "साइन इन गर्नुहोस्" : "Sign in to continue"}
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Your name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required />
+              <label className="text-xs font-medium text-foreground mb-1.5 block">
+                {lang === "ne" ? "पूरा नाम" : "Your name"}
+              </label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={lang === "ne" ? "तपाईंको नाम" : "Full name"}
+                required
+              />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Phone</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+977 98XXXXXXXX" type="tel" required />
+              <label className="text-xs font-medium text-foreground mb-1.5 block">
+                {lang === "ne" ? "फोन नम्बर" : "Phone"}
+              </label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+977 98XXXXXXXX"
+                type="tel"
+                required
+              />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Preferred date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < startOfDay(new Date())} initialFocus />
-                </PopoverContent>
-              </Popover>
+              <label className="text-xs font-medium text-foreground mb-1.5 block">
+                {lang === "ne" ? "अपेक्षित मिति" : "Preferred date"}
+              </label>
+              <Input
+                type="date"
+                min={todayStr}
+                value={preferredDate}
+                onChange={(e) => setPreferredDate(e.target.value)}
+                required
+              />
             </div>
-            <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</> : <><Send className="w-4 h-4 mr-2" /> Send booking request</>}
+            <Button type="submit" disabled={submitting} className="w-full rounded-full">
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {lang === "ne" ? "पठाउँदै…" : "Sending…"}
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  {lang === "ne" ? "बुकिङ पठाउनुहोस्" : "Send request"}
+                </>
+              )}
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              Need more options? <Link to="/services#booking" onClick={() => onOpenChange(false)} className="text-primary hover:underline">Use full booking form</Link>
-            </p>
           </form>
         )}
       </DialogContent>

@@ -1,69 +1,39 @@
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 import logo from "@/assets/karmapath-logo.png";
 
 const Footer = () => {
+  const { lang, t } = useLanguage();
+
   return (
-    <footer className="bg-deep-brown py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <img src={logo} alt="KarmaPath" className="w-9 h-9" loading="lazy" />
-              <span className="font-display text-xl font-bold text-cream">
-                KarmaPath
-              </span>
+    <footer className="bg-deep-brown text-cream py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 pb-8 border-b border-cream/10">
+          <div>
+            <div className="flex items-center gap-2.5 mb-2">
+              <img src={logo} alt="KarmaPath" className="w-8 h-8" loading="lazy" />
+              <span className="font-display text-lg font-bold text-cream">KarmaPath</span>
             </div>
-            <p className="text-warm-stone text-sm leading-relaxed max-w-md mb-6">
-              Your sacred guide to Hindu Karmakanda rituals and Vedic traditions
-              of Nepal. Connecting devotees with knowledgeable Pandits for
-              authentic ceremonies.
-            </p>
-            <p className="text-warm-stone/60 text-sm font-display italic">
-              "धर्मो रक्षति रक्षितः" — Dharma protects those who protect it.
+            <p className="text-warm-stone text-sm max-w-sm">
+              {lang === "ne"
+                ? "नेपाली हिन्दू वैदिक पूजा, संस्कार र अनुभवी पण्डित सेवासँग जोड्ने सरल मञ्च।"
+                : "Connecting families across Nepal with verified Vedic Pandits and sacred traditions."}
             </p>
           </div>
 
-          <div>
-            <h4 className="font-display font-semibold text-cream mb-4">Quick Links</h4>
-            <ul className="space-y-2">
-              {[
-                { label: "Home", to: "/" },
-                { label: "Services", to: "/services" },
-                { label: "Samagri Marketplace", to: "/marketplace" },
-                { label: "Ask AI Pandit", to: "/ask-pandit" },
-                { label: "Blog", to: "/blog" },
-                { label: "Resources", to: "/resources" },
-                { label: "Contact", to: "/contact" },
-              ].map((link) => (
-                <li key={link.label}>
-                  <Link
-                    to={link.to}
-                    className="text-sm text-warm-stone hover:text-saffron transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-display font-semibold text-cream mb-4">Contact</h4>
-            <ul className="space-y-2 text-sm text-warm-stone">
-              <li>Kathmandu, Nepal</li>
-              <li>info@karmapath.com</li>
-              <li>+977 9869667953</li>
-            </ul>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-warm-stone">
+            <Link to="/" className="hover:text-cream transition-colors">{t("nav.home")}</Link>
+            <Link to="/services" className="hover:text-cream transition-colors">{t("nav.services")}</Link>
+            <Link to="/marketplace" className="hover:text-cream transition-colors">{t("nav.marketplace")}</Link>
+            <Link to="/resources" className="hover:text-cream transition-colors">{t("nav.resources")}</Link>
+            <Link to="/blog" className="hover:text-cream transition-colors">{t("nav.blog")}</Link>
+            <Link to="/contact" className="hover:text-cream transition-colors">{t("nav.contact")}</Link>
           </div>
         </div>
 
-        <div className="border-t border-warm-stone/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-warm-stone/60">
-            © {new Date().getFullYear()} KarmaPath. All rights reserved.
-          </p>
-          <p className="text-xs text-warm-stone/40 font-display">
-            ॐ सर्वे भवन्तु सुखिनः
-          </p>
+        <div className="pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-warm-stone/80">
+          <p>© {new Date().getFullYear()} KarmaPath · Kathmandu, Nepal</p>
+          <p className="font-display">ॐ सर्वे भवन्तु सुखिनः</p>
         </div>
       </div>
     </footer>

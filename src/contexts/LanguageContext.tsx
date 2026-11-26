@@ -1,117 +1,58 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-type Lang = "en" | "ne";
+export type Lang = "ne" | "en";
 
-type Dict = Record<string, { en: string; ne: string }>;
+type Dict = Record<string, { ne: string; en: string }>;
 
-// Translation dictionary — keys used across the app
 const dict: Dict = {
   // Navbar
-  "nav.home": { en: "Home", ne: "गृहपृष्ठ" },
-  "nav.services": { en: "Services", ne: "सेवाहरू" },
-  "nav.explore": { en: "Explore", ne: "अन्वेषण" },
-  "nav.marketplace": { en: "Samagri Marketplace", ne: "सामग्री बजार" },
-  "nav.marketplaceDesc": { en: "AI-powered ritual goods guide", ne: "AI-संचालित अनुष्ठान सामग्री मार्गदर्शक" },
-  "nav.festivalCalendar": { en: "Festival Calendar", ne: "चाडपर्व पात्रो" },
-  "nav.festivalCalendarDesc": { en: "Nepali Hindu tithis & auspicious dates", ne: "नेपाली हिन्दू तिथि र शुभ साइतहरू" },
-  "nav.askPandit": { en: "Ask AI Pandit", ne: "AI पण्डितलाई सोध्नुहोस्" },
-  "nav.askPanditDesc": { en: "24/7 ritual guidance chatbot", ne: "२४/७ अनुष्ठान मार्गदर्शक च्याटबट" },
-  "nav.blog": { en: "Blog", ne: "ब्लग" },
-  "nav.resources": { en: "Resources", ne: "स्रोतहरू" },
-  "nav.contact": { en: "Contact", ne: "सम्पर्क" },
-  "nav.dashboard": { en: "Dashboard", ne: "ड्यासबोर्ड" },
-  "nav.signin": { en: "Sign In", ne: "साइन इन" },
-  "nav.signinFull": { en: "Sign In / Sign Up", ne: "साइन इन / दर्ता" },
-  "nav.signout": { en: "Sign Out", ne: "साइन आउट" },
+  "nav.home": { ne: "गृहपृष्ठ", en: "Home" },
+  "nav.services": { ne: "सेवाहरू", en: "Services" },
+  "nav.marketplace": { ne: "पूजा सामग्री", en: "Samagri" },
+  "nav.resources": { ne: "विधि र मन्त्र", en: "Guides" },
+  "nav.blog": { ne: "ब्लग", en: "Blog" },
+  "nav.contact": { ne: "सम्पर्क", en: "Contact" },
+  "nav.dashboard": { ne: "ड्यासबोर्ड", en: "Dashboard" },
+  "nav.signin": { ne: "साइन इन", en: "Sign In" },
+  "nav.signinFull": { ne: "साइन इन / दर्ता", en: "Sign In / Sign Up" },
+  "nav.signout": { ne: "साइन आउट", en: "Sign Out" },
 
   // Hero
-  "hero.badge": { en: "AI-Powered Ritual Platform", ne: "AI-संचालित अनुष्ठान मञ्च" },
-  "hero.title1": { en: "Your Sacred", ne: "तपाईंको पवित्र" },
-  "hero.title2": { en: "Digital Temple", ne: "डिजिटल मन्दिर" },
+  "hero.badge": { ne: "नेपालको वैदिक पूजा मञ्च", en: "Vedic Ritual Platform of Nepal" },
+  "hero.title1": { ne: "घरमै विधिपूर्वक", en: "Authentic Vedic" },
+  "hero.title2": { ne: "वैदिक पूजा र संस्कार", en: "Rituals & Samskaras" },
   "hero.subtitle": {
-    en: "Book verified Pandits, get AI-powered samagri lists, and experience authentic Vedic ceremonies — all from one platform built for Nepal.",
-    ne: "प्रमाणित पण्डितहरू बुक गर्नुहोस्, AI-संचालित सामग्री सूची प्राप्त गर्नुहोस्, र प्रामाणिक वैदिक अनुष्ठानहरूको अनुभव गर्नुहोस् — नेपालको लागि निर्मित एउटै मञ्चबाट।",
+    ne: "अनुभवी पण्डित बुक गर्नुहोस् र आवश्यक पूजा सामग्रीको सहज सूची तुरुन्त पाउनुहोस्।",
+    en: "Book verified Pandits across Nepal and get instant puja samagri checklists in minutes.",
   },
-  "hero.ctaBook": { en: "Book a Ceremony", ne: "अनुष्ठान बुक गर्नुहोस्" },
-  "hero.ctaSamagri": { en: "AI Samagri Guide", ne: "AI सामग्री मार्गदर्शक" },
-  "hero.stat1": { en: "Ceremonies", ne: "अनुष्ठानहरू" },
-  "hero.stat2": { en: "Pandits", ne: "पण्डितहरू" },
-  "hero.stat3": { en: "Cities", ne: "शहरहरू" },
-  "hero.stat4": { en: "Rating", ne: "मूल्याङ्कन" },
+  "hero.ctaBook": { ne: "पूजा बुक गर्नुहोस्", en: "Book a Ceremony" },
+  "hero.ctaSamagri": { ne: "सामग्री सूची", en: "Samagri Guide" },
+  "hero.stat1": { ne: "सम्पन्न पूजा", en: "Ceremonies" },
+  "hero.stat2": { ne: "प्रमाणित गुरु", en: "Pandits" },
+  "hero.stat3": { ne: "शहरहरू", en: "Cities" },
 
-  // Featured rituals (home)
-  "featured.eyebrow": { en: "संस्कार · Featured Rituals", ne: "संस्कार · विशेष अनुष्ठान" },
-  "featured.title": { en: "Sacred Life Rituals", ne: "पवित्र जीवन अनुष्ठान" },
-  "featured.subtitle": {
-    en: "From birth to the final journey — every Samskara is a sacred milestone. Begin with the most-booked ceremonies of the season.",
-    ne: "जन्मदेखि अन्तिम यात्रासम्म — हरेक संस्कार एक पवित्र कोसेढुङ्गा हो। सिजनको सबैभन्दा धेरै बुक भएका अनुष्ठानहरूबाट सुरु गर्नुहोस्।",
-  },
-  "featured.viewAll": { en: "View All 16 Samskaras", ne: "सबै १६ संस्कारहरू हेर्नुहोस्" },
-  "featured.bookNow": { en: "Book Now", ne: "अहिले बुक गर्नुहोस्" },
-
-  // Ritual content
-  "ritual.vivah.title": { en: "विवाह संस्कार", ne: "विवाह संस्कार" },
-  "ritual.vivah.sub": { en: "Vivah · The Sacred Union", ne: "विवाह · पवित्र मिलन" },
-  "ritual.vivah.desc": {
-    en: "A complete Vedic wedding with Saptapadi, Kanyadaan, Mangalsutra, and the seven sacred vows around the holy fire. Performed by senior Pandits with full ritual fidelity.",
-    ne: "सप्तपदी, कन्यादान, मङ्गलसूत्र र पवित्र अग्निवरिपरि सात पवित्र वचनसहित पूर्ण वैदिक विवाह। पूर्ण अनुष्ठान निष्ठाका साथ वरिष्ठ पण्डितद्वारा सम्पन्न।",
-  },
-  "ritual.bratabandha.title": { en: "ब्रतबन्ध", ne: "ब्रतबन्ध" },
-  "ritual.bratabandha.sub": { en: "Bratabandha · Sacred Thread Initiation", ne: "ब्रतबन्ध · यज्ञोपवीत संस्कार" },
-  "ritual.bratabandha.desc": {
-    en: "The Upanayana ceremony marking a boy's spiritual rebirth — Gayatri Mantra initiation, sacred thread (Janai), and Bhiksha ritual following ancient Vedic procedures.",
-    ne: "बालकको आध्यात्मिक पुनर्जन्म चिनो उपनयन संस्कार — गायत्री मन्त्र दीक्षा, जनै र भिक्षा अनुष्ठान, प्राचीन वैदिक विधि अनुसार।",
-  },
-
-  // Why trust
-  "why.title1": { en: "Why Families Trust", ne: "परिवारहरूले किन भरोसा गर्छन्" },
-  "why.subtitle": {
-    en: "Nepal's most trusted platform for authentic Vedic ceremonies — connecting devoted families with experienced Pandits.",
-    ne: "प्रामाणिक वैदिक अनुष्ठानका लागि नेपालको सबैभन्दा भरपर्दो मञ्च — श्रद्धालु परिवारहरूलाई अनुभवी पण्डितहरूसँग जोड्दै।",
-  },
-  "why.card1.title": { en: "Verified & Trusted", ne: "प्रमाणित र भरपर्दो" },
-  "why.card1.desc": {
-    en: "Every Pandit on KarmaPath is personally verified with authentic Vedic training, references, and years of ceremony experience across Nepal.",
-    ne: "KarmaPath का हरेक पण्डित प्रामाणिक वैदिक तालिम, सिफारिस र नेपालभर वर्षौंको अनुष्ठान अनुभवसहित व्यक्तिगत रूपमा प्रमाणित छन्।",
-  },
-  "why.card2.title": { en: "Hassle-Free Booking", ne: "झन्झटमुक्त बुकिङ" },
-  "why.card2.desc": {
-    en: "Book ceremonies in minutes. Choose your ritual, select a date, pick a Pandit — we handle coordination, samagri guidance, and scheduling.",
-    ne: "मिनेटमै अनुष्ठान बुक गर्नुहोस्। अनुष्ठान छान्नुहोस्, मिति चयन गर्नुहोस्, पण्डित छान्नुहोस् — समन्वय, सामग्री मार्गदर्शन र तालिका हामी सम्हाल्छौं।",
-  },
-  "why.card3.title": { en: "Authentic Traditions", ne: "प्रामाणिक परम्पराहरू" },
-  "why.card3.desc": {
-    en: "No shortcuts. Our Pandits perform complete, authentic Vedic rituals with proper mantras, procedures, and sacred traditions preserved for generations.",
-    ne: "कुनै सर्टकट छैन। हाम्रा पण्डितहरूले पुस्तौँदेखि संरक्षित उचित मन्त्र, विधि र पवित्र परम्परासहित पूर्ण, प्रामाणिक वैदिक अनुष्ठान गर्छन्।",
-  },
+  // Rituals
+  "featured.eyebrow": { ne: "पवित्र संस्कार", en: "Sacred Rituals" },
+  "featured.title": { ne: "प्रमुख वैदिक सेवाहरू", en: "Core Vedic Ceremonies" },
+  "featured.viewAll": { ne: "सबै सेवाहरू हेर्नुहोस्", en: "View All Services" },
+  "featured.bookNow": { ne: "बुक गर्नुहोस्", en: "Book Now" },
 
   // Pandits
-  "pandits.eyebrow": { en: "पुरोहित", ne: "पुरोहित" },
-  "pandits.title1": { en: "Meet Our", ne: "हाम्रा पण्डितहरूसँग" },
-  "pandits.title2": { en: "Pandits", ne: "भेट्नुहोस्" },
-  "pandits.subtitle": {
-    en: "Each Pandit is personally verified with authentic Vedic training certificates, references, and years of ceremony experience across Nepal.",
-    ne: "हरेक पण्डित प्रामाणिक वैदिक तालिम प्रमाणपत्र, सिफारिस र नेपालभर वर्षौंको अनुष्ठान अनुभवसहित व्यक्तिगत रूपमा प्रमाणित छन्।",
-  },
-  "pandits.years": { en: "years", ne: "वर्ष" },
-  "pandits.ceremonies": { en: "ceremonies", ne: "अनुष्ठानहरू" },
-  "pandits.contact": { en: "Contact", ne: "सम्पर्क" },
-
-  // Testimonials
-  "testimonials.eyebrow": { en: "प्रशंसापत्र", ne: "प्रशंसापत्र" },
-  "testimonials.title": { en: "What Families Say", ne: "परिवारहरू के भन्छन्" },
+  "pandits.eyebrow": { ne: "हाम्रा पुरोहित", en: "Our Acharyas" },
+  "pandits.title1": { ne: "अनुभवी र प्रमाणित", en: "Verified Vedic" },
+  "pandits.title2": { ne: "पण्डितहरू", en: "Pandits" },
+  "pandits.years": { ne: "वर्ष अनुभव", en: "yrs exp" },
+  "pandits.ceremonies": { ne: "पूजा", en: "pujas" },
+  "pandits.contact": { ne: "बुक गर्नुहोस्", en: "Book" },
 
   // CTA
-  "cta.title": { en: "Begin Your Sacred Journey", ne: "आफ्नो पवित्र यात्रा सुरु गर्नुहोस्" },
+  "cta.title": { ne: "शुभ कार्यको तयारी सुरु गरौं", en: "Ready to Plan Your Ceremony?" },
   "cta.subtitle": {
-    en: "Book a ceremony with a verified Pandit, explore our mantra library, or connect with us for guidance on any Karmakanda ritual.",
-    ne: "प्रमाणित पण्डितसँग अनुष्ठान बुक गर्नुहोस्, हाम्रो मन्त्र पुस्तकालय अन्वेषण गर्नुहोस्, वा कुनै पनि कर्मकाण्ड अनुष्ठानको मार्गदर्शनका लागि हामीलाई सम्पर्क गर्नुहोस्।",
+    ne: "तपाईंको परिवारको परम्परा अनुसार अनुभवी पण्डितसँग सजिलै समय मिलाउनुहोस्।",
+    en: "Schedule a verified Pandit tailored to your family's Vedic tradition.",
   },
-  "cta.bookPuja": { en: "Book a Puja", ne: "पूजा बुक गर्नुहोस्" },
-  "cta.exploreResources": { en: "Explore Resources", ne: "स्रोतहरू अन्वेषण गर्नुहोस्" },
-
-  // Quotes
-  "quotes.eyebrow": { en: "Wisdom from the Shastras", ne: "शास्त्रहरूको ज्ञान" },
+  "cta.bookPuja": { ne: "अहिले बुक गर्नुहोस्", en: "Book a Puja" },
+  "cta.exploreResources": { ne: "मन्त्र र विधि हेर्नुहोस्", en: "Read Ritual Guides" },
 };
 
 interface LanguageContextValue {
@@ -120,16 +61,19 @@ interface LanguageContextValue {
   t: (key: string) => string;
 }
 
+const STORAGE_KEY = "karmapath_lang_v2";
+
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === "undefined") return "en";
-    return (localStorage.getItem("karmapath_lang") as Lang) || "en";
+    if (typeof window === "undefined") return "ne";
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved === "en" || saved === "ne" ? saved : "ne";
   });
 
   useEffect(() => {
-    localStorage.setItem("karmapath_lang", lang);
+    localStorage.setItem(STORAGE_KEY, lang);
     document.documentElement.lang = lang === "ne" ? "ne" : "en";
   }, [lang]);
 
@@ -138,7 +82,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const t = (key: string) => {
     const entry = dict[key];
     if (!entry) return key;
-    return entry[lang] || entry.en;
+    return entry[lang] || entry.ne;
   };
 
   return <LanguageContext.Provider value={{ lang, setLang, t }}>{children}</LanguageContext.Provider>;

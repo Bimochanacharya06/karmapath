@@ -15,8 +15,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Playfair Display', 'Georgia', 'serif'],
-        body: ['system-ui', '-apple-system', 'sans-serif'],
+        display: ['Playfair Display', 'Noto Serif Devanagari', 'Georgia', 'serif'],
+        body: ['Plus Jakarta Sans', 'Mukta', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

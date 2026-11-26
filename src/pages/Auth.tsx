@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { checkSupabaseCloudOnline } from "@/integrations/supabase/localFallback";
 import { lovable } from "@/integrations/lovable/index";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -51,6 +53,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const { toast } = useToast();
+  const { lang } = useLanguage();
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
   const navigate = useNavigate();
 
@@ -102,6 +105,18 @@ const Auth = () => {
         if (result.redirected) return;
         toast({ title: "🙏 Welcome!", description: "Signed in with Google successfully." });
         navigate("/dashboard");
+        return;
+      }
+
+      const cloudOnline = await checkSupabaseCloudOnline(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      );
+      if (!cloudOnline) {
+        toast({
+          title: "Use Email Sign-Up / Sign-In below",
+          description: "Cloud Google OAuth is offline because the original Supabase instance is paused. Email accounts work immediately!",
+        });
         return;
       }
 
@@ -425,12 +440,22 @@ const Auth = () => {
               <>
                 <div className="text-center mb-7">
                   <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-                    {view === "login" ? "Welcome Back" : "Join KarmaPath"}
+                    {view === "login"
+                      ? lang === "ne"
+                        ? "स्वागत छ"
+                        : "Welcome Back"
+                      : lang === "ne"
+                        ? "नयाँ खाता खोल्नुहोस्"
+                        : "Join KarmaPath"}
                   </h1>
                   <p className="text-muted-foreground text-sm">
                     {view === "login"
-                      ? "Sign in to manage your bookings and ceremonies"
-                      : "Create an account to book pujas and connect with Pandits"}
+                      ? lang === "ne"
+                        ? "आफ्नो बुकिङ व्यवस्थापन गर्न साइन इन गर्नुहोस्"
+                        : "Sign in to manage your bookings and ceremonies"
+                      : lang === "ne"
+                        ? "पूजा र पण्डित बुक गर्न सजिलै दर्ता गर्नुहोस्"
+                        : "Create an account to book pujas and connect with Pandits"}
                   </p>
                 </div>
 

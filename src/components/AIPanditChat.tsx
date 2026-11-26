@@ -6,10 +6,11 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { resilientSupabaseFetch } from "@/integrations/supabase/localFallback";
 
 export type Msg = { role: "user" | "assistant"; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-pandit`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL || "https://local.karmapath.invalid"}/functions/v1/ask-pandit`;
 
 const SUGGESTIONS = [
   "What samagri do I need for Satyanarayan Puja?",
@@ -44,7 +45,7 @@ const AIPanditChat = ({ variant = "panel", onClose }: AIPanditChatProps) => {
     setLoading(true);
 
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await resilientSupabaseFetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
