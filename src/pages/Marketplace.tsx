@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Sparkles, Loader2, Search, CheckCircle2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Sparkles, Loader2, Search, CheckSquare, Square, ArrowRight, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SERVICE_PACKAGES } from "@/data/serviceCatalog";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -11,11 +12,8 @@ interface SamagriItem {
   name: string;
   nameNepali: string;
   category: string;
-  description: string;
   quantity: string;
-  estimatedPriceNPR: number;
   essential: boolean;
-  whereToFind: string;
 }
 
 const pujaPresets = [
@@ -31,9 +29,10 @@ const pujaPresets = [
 const Marketplace = () => {
   const { lang } = useLanguage();
   const [searchParams] = useSearchParams();
-  const [selectedPuja, setSelectedPuja] = useState("");
+  const [selectedPuja, setSelectedPuja] = useState("Satyanarayan Puja");
   const [customPuja, setCustomPuja] = useState("");
   const [items, setItems] = useState<SamagriItem[]>([]);
+  const [ownedNames, setOwnedNames] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -41,7 +40,7 @@ const Marketplace = () => {
     if (!puja) return;
     setLoading(true);
     setError("");
-    setItems([]);
+    setOwnedNames({});
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("recommend-samagri", {
@@ -62,17 +61,15 @@ const Marketplace = () => {
   };
 
   useEffect(() => {
-    const requestedPuja = searchParams.get("puja");
-    if (requestedPuja) {
-      if (pujaPresets.some((p) => p.value === requestedPuja)) {
-        setSelectedPuja(requestedPuja);
-        setCustomPuja("");
-      } else {
-        setCustomPuja(requestedPuja);
-        setSelectedPuja("");
-      }
-      void runSearchForPuja(requestedPuja);
+    const requestedPuja = searchParams.get("puja") || "Satyanarayan Puja";
+    if (pujaPresets.some((p) => p.value === requestedPuja)) {
+      setSelectedPuja(requestedPuja);
+      setCustomPuja("");
+    } else {
+      setCustomPuja(requestedPuja);
+      setSelectedPuja("");
     }
+    void runSearchForPuja(requestedPuja);
   }, [searchParams]);
 
   const handleSearch = async () => {
@@ -80,31 +77,37 @@ const Marketplace = () => {
     await runSearchForPuja(puja);
   };
 
-  const totalEstimate = items.reduce((sum, i) => sum + (Number(i.estimatedPriceNPR) || 0), 0);
+  const toggleOwned = (name: string) => {
+    setOwnedNames((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const activePujaLabel = customPuja.trim() || selectedPuja;
+  const matchedPkg = SERVICE_PACKAGES.find((p) => p.samagriQuery === activePujaLabel);
+  const readyCount = items.filter((i) => ownedNames[i.name]).length;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <section className="pt-28 pb-12 bg-gradient-warm">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-primary text-xs font-semibold tracking-widest uppercase mb-2">
-            {lang === "ne" ? "पूजा सामग्री" : "Samagri Checklist"}
+      <section className="pt-24 pb-8 bg-gradient-warm border-b border-border">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <p className="text-primary text-xs font-semibold tracking-widest uppercase mb-1.5">
+            {lang === "ne" ? "पूजा सामग्री चेकलिस्ट" : "Samagri Checklist"}
           </p>
-          <h1 className="font-display text-3xl md:text-5xl font-bold text-foreground mb-3">
-            {lang === "ne" ? "पूजा सामग्री सूची" : "Puja Samagri Guide"}
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">
+            {lang === "ne" ? "आवश्यक पूजा सामग्री सूची" : "Puja Samagri Preparation List"}
           </h1>
-          <p className="text-muted-foreground text-base">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {lang === "ne"
-              ? "पूजा छान्नुहोस् र आवश्यक सामग्री, परिमाण र अनुमानित मूल्य हेर्नुहोस्।"
-              : "Pick a ceremony to get the required items, quantities, and estimated prices."}
+              ? "तयार भइसकेका सामग्रीमा टिक लगाउनुहोस् वा पण्डितसहित सामग्री व्यवस्था बुक गर्नुहोस्।"
+              : "Tick off items as you prepare them, or request full Pandit + Samagri setup."}
           </p>
         </div>
       </section>
 
-      <section className="py-12 flex-1">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="bg-card rounded-2xl border border-border shadow-card p-6 space-y-4 mb-8">
+      <section className="py-10 flex-1">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="bg-card rounded-2xl border border-border shadow-card p-5 space-y-4 mb-6">
             <div className="flex flex-wrap gap-2">
               {pujaPresets.map((p) => (
                 <button
@@ -113,9 +116,10 @@ const Marketplace = () => {
                   onClick={() => {
                     setSelectedPuja(p.value);
                     setCustomPuja("");
+                    void runSearchForPuja(p.value);
                   }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                    selectedPuja === p.value
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    selectedPuja === p.value && !customPuja
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:text-foreground"
                   }`}
@@ -125,14 +129,12 @@ const Marketplace = () => {
               ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <div className="flex-1 relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder={
-                    lang === "ne" ? "वा अन्य पूजाको नाम लेख्नुहोस्..." : "Or type another ritual name..."
-                  }
+                  placeholder={lang === "ne" ? "अन्य पूजा खोज्नुहोस्..." : "Search custom puja..."}
                   value={customPuja}
                   onChange={(e) => {
                     setCustomPuja(e.target.value);
@@ -141,23 +143,23 @@ const Marketplace = () => {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !loading) handleSearch();
                   }}
-                  className="w-full pl-10 pr-4 h-11 rounded-full border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full pl-10 pr-4 h-10 rounded-full border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
               <Button
                 onClick={handleSearch}
                 disabled={loading || (!selectedPuja && !customPuja.trim())}
-                className="rounded-full px-6 h-11"
+                className="rounded-full px-6 h-10"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    {lang === "ne" ? "तयार हुँदैछ..." : "Loading..."}
+                    {lang === "ne" ? "खोजिँदैछ..." : "Loading..."}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    {lang === "ne" ? "सूची हेर्नुहोस्" : "Get List"}
+                    <Sparkles className="w-4 h-4 mr-1.5" />
+                    {lang === "ne" ? "सूची हेर्नुहोस्" : "Show List"}
                   </>
                 )}
               </Button>
@@ -172,53 +174,70 @@ const Marketplace = () => {
 
           {items.length > 0 && (
             <div className="bg-card rounded-2xl border border-border shadow-card overflow-hidden">
-              <div className="px-6 py-4 bg-muted/40 border-b border-border flex items-center justify-between">
+              <div className="px-6 py-4 bg-muted/40 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-display text-lg font-bold text-foreground">
-                    {customPuja.trim() || selectedPuja}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {items.length} {lang === "ne" ? "सामग्रीहरू" : "items"}
+                  <h2 className="font-display text-lg font-bold text-foreground">{activePujaLabel}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {lang === "ne"
+                      ? `${readyCount} / ${items.length} सामग्री तयार`
+                      : `${readyCount} of ${items.length} items ready`}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">
-                    {lang === "ne" ? "अनुमानित जम्मा" : "Est. Total"}
-                  </p>
-                  <p className="font-display text-xl font-bold text-primary">
-                    रू {totalEstimate.toLocaleString()}
-                  </p>
-                </div>
+
+                <Link
+                  to={
+                    matchedPkg
+                      ? `/services?service=${matchedPkg.id}&tier=full#booking`
+                      : "/services?tier=full#booking"
+                  }
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:brightness-110 transition-all self-start sm:self-auto"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  {lang === "ne" ? "पण्डित + सामग्री बुक गर्नुहोस्" : "Book Pandit + Samagri"}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
               <div className="divide-y divide-border">
-                {items.map((item) => (
-                  <div key={item.name} className="px-6 py-3.5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2
-                          className={`w-4 h-4 shrink-0 ${
-                            item.essential ? "text-primary" : "text-muted-foreground/50"
-                          }`}
-                        />
-                        <p className="font-medium text-sm text-foreground truncate">
-                          {lang === "ne" ? item.nameNepali : item.name}
-                        </p>
-                        <span className="text-xs text-muted-foreground hidden sm:inline">
-                          ({lang === "ne" ? item.name : item.nameNepali})
+                {items.map((item) => {
+                  const isOwned = Boolean(ownedNames[item.name]);
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => toggleOwned(item.name)}
+                      className={`w-full px-6 py-3.5 flex items-center justify-between gap-4 text-left hover:bg-muted/30 transition-colors ${
+                        isOwned ? "opacity-55 bg-muted/20" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {isOwned ? (
+                          <CheckSquare className="w-4 h-4 text-secondary shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <span className={`font-medium text-sm text-foreground ${isOwned ? "line-through" : ""}`}>
+                            {lang === "ne" ? item.nameNepali : item.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
+                            ({lang === "ne" ? item.name : item.nameNepali})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {item.essential && (
+                          <span className="hidden sm:inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                            {lang === "ne" ? "अनिवार्य" : "Essential"}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                          {item.quantity}
                         </span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0 text-sm">
-                      <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                        {item.quantity}
-                      </span>
-                      <span className="font-semibold text-foreground w-20 text-right">
-                        रू {(Number(item.estimatedPriceNPR) || 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

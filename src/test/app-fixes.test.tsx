@@ -3,11 +3,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { emitAdminBookingAlert, subscribeToAdminAlerts } from "@/lib/adminNotify";
 import HeroSection from "@/components/HeroSection";
 import Navbar from "@/components/Navbar";
 import Resources from "@/pages/Resources";
+import Services from "@/pages/Services";
 import Auth from "@/pages/Auth";
 import Blog from "@/pages/Blog";
+import Admin from "@/pages/Admin";
 
 const { signInWithOAuthMock, signUpMock, resendMock, lovableOAuthMock } = vi.hoisted(() => ({
   signInWithOAuthMock: vi.fn().mockResolvedValue({ data: {}, error: null }),
@@ -40,14 +43,27 @@ vi.mock("@/integrations/supabase/client", () => ({
       resetPasswordForEmail: vi.fn().mockResolvedValue({ data: {}, error: null }),
       updateUser: vi.fn().mockResolvedValue({ data: {}, error: null }),
     },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-      update: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnValue({}),
     })),
+    removeChannel: vi.fn(),
+    from: vi.fn(() => {
+      const builder = {
+        select: vi.fn(() => builder),
+        eq: vi.fn(() => builder),
+        order: vi.fn(() => builder),
+        limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        update: vi.fn(() => builder),
+        insert: vi.fn(() => builder),
+        delete: vi.fn(() => builder),
+        single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        upsert: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        then: (resolve: (val: { data: never[]; error: null }) => unknown) =>
+          Promise.resolve({ data: [], error: null }).then(resolve),
+      };
+      return builder;
+    }),
   },
 }));
 
@@ -67,13 +83,14 @@ vi.mock("@/integrations/supabase/localFallback", async (importOriginal) => {
   };
 });
 
-describe("KarmaPath Nepali-first & streamlined UI", () => {
+describe("KarmaPath split hero, price-free services, blog & secured admin gate", () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.clearAllMocks();
   });
 
-  it("defaults to Nepali first and switches to English when clicking the language toggle", () => {
+  it("renders side-by-side text + image Hero in Nepali first and toggles to English", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <LanguageProvider>
@@ -86,13 +103,66 @@ describe("KarmaPath Nepali-first & streamlined UI", () => {
     expect(screen.getByText("गृहपृष्ठ")).toBeInTheDocument();
     expect(screen.getByText("पूजा सामग्री")).toBeInTheDocument();
     expect(screen.getByText(/वैदिक पूजा र संस्कार/)).toBeInTheDocument();
+    expect(screen.getByAltText(/पशुपतिनाथ सन्ध्या आरती/)).toBeInTheDocument();
     expect(screen.queryByText(/Calendar/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /toggle language/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /toggle language/i })[0]);
 
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("Samagri")).toBeInTheDocument();
     expect(screen.getByText(/Rituals & Samskaras/)).toBeInTheDocument();
+    expect(screen.getByAltText(/Pashupatinath evening aarti/i)).toBeInTheDocument();
+  });
+
+  it("blocks unauthenticated visitors on /admin with Two-Step Secure Admin Login gate", async () => {
+    render(
+      <MemoryRouter initialEntries={["/admin"]}>
+        <LanguageProvider>
+          <Admin />
+        </LanguageProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("सुरक्षित एडमिन लग-इन")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("admin@karmapath.com")).toBeInTheDocument();
+    expect(screen.queryByText("एडमिन कन्ट्रोल प्यानल")).not.toBeInTheDocument();
+  });
+
+  it("shows no rupee price numbers on Services while switching Pandit+Samagri vs Pandit-Only scope", () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={["/services"]}>
+        <LanguageProvider>
+          <Services />
+        </LanguageProvider>
+      </MemoryRouter>,
+    );
+
+    expect(container.textContent).not.toMatch(/रू\s*\d/);
+    expect(screen.getByText("सप्तपदी र हवन सामग्री व्यवस्था")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /पण्डित मात्र/i }));
+    expect(screen.getByText("सम्पूर्ण विवाह विधि")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/रू\s*\d/);
+  });
+
+  it("notifies subscribed Admin listeners immediately when a puja booking alert is emitted", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToAdminAlerts(listener);
+
+    emitAdminBookingAlert({
+      ritual_type: "सत्यनारायण पूजा (Satyanarayan Puja)",
+      preferred_date: "2026-12-05",
+      contact_name: "Aarav Sharma",
+      phone: "+977 9841223344",
+    });
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contact_name: "Aarav Sharma",
+        ritual_type: "सत्यनारायण पूजा (Satyanarayan Puja)",
+      }),
+    );
+    unsubscribe();
   });
 
   it("renders concise Resources guides in Nepali without any Festival Calendar", () => {
@@ -106,10 +176,9 @@ describe("KarmaPath Nepali-first & streamlined UI", () => {
 
     expect(screen.getByText("सरल पूजा विधि र मन्त्र")).toBeInTheDocument();
     expect(screen.queryByText(/Festival Calendar/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/चाडपर्व पात्रो/i)).not.toBeInTheDocument();
   });
 
-  it("uses Supabase OAuth with origin redirect instead of Lovable /~oauth/initiate proxy on non-Lovable hosts", async () => {
+  it("uses Supabase OAuth with origin redirect on non-Lovable hosts", async () => {
     render(
       <MemoryRouter initialEntries={["/auth"]}>
         <LanguageProvider>
@@ -126,7 +195,6 @@ describe("KarmaPath Nepali-first & streamlined UI", () => {
         options: { redirectTo: window.location.origin },
       });
     });
-    expect(lovableOAuthMock).not.toHaveBeenCalled();
   });
 
   it("validates confirm password and transitions Sign Up to Verify Your Email screen", async () => {

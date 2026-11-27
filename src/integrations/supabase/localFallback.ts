@@ -1,4 +1,5 @@
 import type { Tables } from "./types";
+import { DEFAULT_BLOG_POSTS } from "@/data/blogCatalog";
 
 interface LocalAccount {
   id: string;
@@ -17,9 +18,17 @@ interface LocalDatabase {
   pandits: Tables<"pandits">[];
   bookings: Tables<"bookings">[];
   contact_messages: Tables<"contact_messages">[];
+  blog_posts: Tables<"blog_posts">[];
 }
 
 const STORAGE_KEY = "karmapath_local_db_v1";
+const DEFAULT_ADMIN_ID = "00000000-0000-4000-8000-000000000001";
+export const DEFAULT_ADMIN_EMAIL = (
+  import.meta.env.VITE_ADMIN_EMAIL || "admin@karmapath.com"
+)
+  .trim()
+  .toLowerCase();
+const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "KarmaAdmin@2026";
 
 const SEEDED_PANDITS: Tables<"pandits">[] = [
   {
@@ -138,14 +147,14 @@ const fromBase64Url = (b64url: string): string => {
   return new TextDecoder().decode(bytes);
 };
 
-const hashPassword = async (password: string): Promise<string> => {
+export const hashSecret = async (secret: string): Promise<string> => {
   if (typeof crypto !== "undefined" && crypto.subtle) {
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`karmapath:${password}`));
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`karmapath:${secret}`));
     return Array.from(new Uint8Array(buf))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
   }
-  return toBase64Url(`karmapath:${password}`);
+  return toBase64Url(`karmapath:${secret}`);
 };
 
 const loadDb = (): LocalDatabase => {
@@ -157,9 +166,10 @@ const loadDb = (): LocalDatabase => {
         users: parsed.users || [],
         profiles: parsed.profiles || [],
         user_roles: parsed.user_roles || [],
-        pandits: parsed.pandits && parsed.pandits.length > 0 ? parsed.pandits : SEEDED_PANDITS,
+        pandits: Array.isArray(parsed.pandits) ? parsed.pandits : [...SEEDED_PANDITS],
         bookings: parsed.bookings || [],
         contact_messages: parsed.contact_messages || [],
+        blog_posts: Array.isArray(parsed.blog_posts) ? parsed.blog_posts : [...DEFAULT_BLOG_POSTS],
       };
     }
   } catch {
@@ -169,14 +179,75 @@ const loadDb = (): LocalDatabase => {
     users: [],
     profiles: [],
     user_roles: [],
-    pandits: SEEDED_PANDITS,
+    pandits: [...SEEDED_PANDITS],
     bookings: [],
     contact_messages: [],
+    blog_posts: [...DEFAULT_BLOG_POSTS],
   };
 };
 
 const saveDb = (db: LocalDatabase) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+};
+
+const ensureAdminProvisioned = async (db: LocalDatabase): Promise<LocalDatabase> => {
+  let dirty = false;
+  let adminAcct = db.users.find((u) => u.email === DEFAULT_ADMIN_EMAIL);
+
+  if (!adminAcct) {
+    const now = "2026-04-01T00:00:00.000Z";
+    const passwordHash = await hashSecret(DEFAULT_ADMIN_PASSWORD);
+    adminAcct = {
+      id: DEFAULT_ADMIN_ID,
+      email: DEFAULT_ADMIN_EMAIL,
+      passwordHash,
+      full_name: "KarmaPath Administrator",
+      phone: "+977 9800000000",
+      created_at: now,
+      updated_at: now,
+    };
+    db.users.push(adminAcct);
+    dirty = true;
+  }
+
+  if (!db.profiles.some((p) => p.user_id === adminAcct.id)) {
+    db.profiles.push({
+      id: makeId(),
+      user_id: adminAcct.id,
+      full_name: adminAcct.full_name,
+      phone: adminAcct.phone,
+      role: "admin",
+      avatar_url: null,
+      bio: null,
+      city: "Kathmandu",
+      created_at: adminAcct.created_at,
+      updated_at: adminAcct.updated_at,
+    });
+    dirty = true;
+  }
+
+  if (!db.user_roles.some((r) => r.user_id === adminAcct.id && r.role === "admin")) {
+    db.user_roles = db.user_roles.filter((r) => r.user_id !== adminAcct.id);
+    db.user_roles.push({
+      id: makeId(),
+      user_id: adminAcct.id,
+      role: "admin",
+    });
+    dirty = true;
+  }
+
+  // Enforce strict least-privilege: revoke any legacy non-allowlisted "admin" role grants
+  for (const roleRow of db.user_roles) {
+    if (roleRow.role === "admin" && roleRow.user_id !== adminAcct.id) {
+      roleRow.role = "user";
+      dirty = true;
+    }
+  }
+
+  if (dirty) {
+    saveDb(db);
+  }
+  return db;
 };
 
 const buildSupabaseUser = (acct: LocalAccount) => ({
@@ -274,12 +345,12 @@ const parseBody = async (init?: RequestInit): Promise<Record<string, unknown>> =
 };
 
 const handleAuthEndpoint = async (url: URL, method: string, init?: RequestInit): Promise<Response> => {
-  const path = url.pathname.replace(/^\/auth\/v1/, "");
-  const db = loadDb();
-
   if (method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }
+
+  const path = url.pathname.replace(/^\/auth\/v1/, "");
+  const db = await ensureAdminProvisioned(loadDb());
 
   if (path === "/signup" && method === "POST") {
     const body = await parseBody(init);
@@ -295,13 +366,13 @@ const handleAuthEndpoint = async (url: URL, method: string, init?: RequestInit):
     if (password.length < 6) {
       return jsonResponse({ code: "weak_password", msg: "Password should be at least 6 characters." }, 422);
     }
-    if (db.users.some((u) => u.email === email)) {
+    if (email === DEFAULT_ADMIN_EMAIL || db.users.some((u) => u.email === email)) {
       return jsonResponse({ code: "user_already_exists", msg: "User already registered" }, 422);
     }
 
     const now = new Date().toISOString();
     const id = makeId();
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashSecret(password);
     const newAcct: LocalAccount = {
       id,
       email,
@@ -325,10 +396,12 @@ const handleAuthEndpoint = async (url: URL, method: string, init?: RequestInit):
       created_at: now,
       updated_at: now,
     });
+
+    // Normal signups strictly receive "user" role — never "admin"
     db.user_roles.push({
       id: makeId(),
       user_id: id,
-      role: db.users.length === 1 ? "admin" : "user",
+      role: "user",
     });
     saveDb(db);
 
@@ -346,7 +419,7 @@ const handleAuthEndpoint = async (url: URL, method: string, init?: RequestInit):
       if (!acct) {
         return jsonResponse({ code: "invalid_credentials", msg: "Invalid login credentials" }, 400);
       }
-      const candidateHash = await hashPassword(password);
+      const candidateHash = await hashSecret(password);
       if (acct.passwordHash !== candidateHash) {
         return jsonResponse({ code: "invalid_credentials", msg: "Invalid login credentials" }, 400);
       }
@@ -381,7 +454,7 @@ const handleAuthEndpoint = async (url: URL, method: string, init?: RequestInit):
     }
     const body = await parseBody(init);
     if (typeof body.password === "string" && body.password.length >= 6) {
-      acct.passwordHash = await hashPassword(body.password);
+      acct.passwordHash = await hashSecret(body.password);
     }
     acct.updated_at = new Date().toISOString();
     saveDb(db);
@@ -401,7 +474,7 @@ const handleAuthEndpoint = async (url: URL, method: string, init?: RequestInit):
 
 type TableName = keyof Omit<LocalDatabase, "users">;
 
-const applyPostgrestFilters = (rows: Record<string, unknown>[], params: URLSearchParams) => {
+const filterAndSortRows = (rows: Record<string, unknown>[], params: URLSearchParams) => {
   let result = [...rows];
 
   params.forEach((rawVal, key) => {
@@ -441,24 +514,26 @@ const applyPostgrestFilters = (rows: Record<string, unknown>[], params: URLSearc
     }
   }
 
-  const selectParam = params.get("select");
-  if (selectParam && selectParam !== "*") {
-    const cols = selectParam
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
-    if (cols.length > 0 && !cols.includes("*")) {
-      result = result.map((row) => {
-        const projected: Record<string, unknown> = {};
-        for (const col of cols) {
-          if (col in row) projected[col] = row[col];
-        }
-        return projected;
-      });
-    }
-  }
-
   return result;
+};
+
+const projectColumns = (rows: Record<string, unknown>[], params: URLSearchParams) => {
+  const selectParam = params.get("select");
+  if (!selectParam || selectParam === "*") return rows;
+
+  const cols = selectParam
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  if (cols.length === 0 || cols.includes("*")) return rows;
+
+  return rows.map((row) => {
+    const projected: Record<string, unknown> = {};
+    for (const col of cols) {
+      if (col in row) projected[col] = row[col];
+    }
+    return projected;
+  });
 };
 
 const handleRestEndpoint = async (url: URL, method: string, init?: RequestInit): Promise<Response> => {
@@ -467,7 +542,7 @@ const handleRestEndpoint = async (url: URL, method: string, init?: RequestInit):
   }
 
   const table = url.pathname.replace(/^\/rest\/v1\//, "").split("/")[0] as TableName;
-  const db = loadDb();
+  const db = await ensureAdminProvisioned(loadDb());
   if (!(table in db) || table === ("users" as string)) {
     return jsonResponse([], 200);
   }
@@ -479,7 +554,8 @@ const handleRestEndpoint = async (url: URL, method: string, init?: RequestInit):
   const rows = db[table] as unknown as Record<string, unknown>[];
 
   if (method === "HEAD" || method === "GET") {
-    const filtered = applyPostgrestFilters(rows, url.searchParams);
+    const matched = filterAndSortRows(rows, url.searchParams);
+    const filtered = projectColumns(matched, url.searchParams);
     const rangeHeader =
       filtered.length > 0 ? `0-${filtered.length - 1}/${filtered.length}` : `*/0`;
 
@@ -544,21 +620,46 @@ const handleRestEndpoint = async (url: URL, method: string, init?: RequestInit):
       } else if (table === "profiles") {
         newRow.role = newRow.role || "devotee";
         newRow.updated_at = now;
+      } else if (table === "pandits") {
+        newRow.user_id = newRow.user_id ?? null;
+        newRow.verified = newRow.verified ?? true;
+        newRow.rating = newRow.rating ?? 4.9;
+        newRow.experience_years = newRow.experience_years ?? 15;
+        newRow.total_ceremonies = newRow.total_ceremonies ?? 500;
+        newRow.specializations = Array.isArray(newRow.specializations) ? newRow.specializations : [];
+        newRow.photo_url = newRow.photo_url ?? null;
+        newRow.phone = newRow.phone ?? null;
+        newRow.city = newRow.city ?? "Kathmandu";
+        newRow.bio = newRow.bio ?? null;
+        newRow.updated_at = now;
+      } else if (table === "blog_posts") {
+        newRow.published = newRow.published ?? true;
+        newRow.author = newRow.author || "Pt. Ram Prasad Sharma";
+        newRow.read_time = newRow.read_time || "5 min";
+        newRow.category_ne = newRow.category_ne || "वैदिक ज्ञान";
+        newRow.category_en = newRow.category_en || "Vedic Wisdom";
+        newRow.title_en = newRow.title_en || newRow.title_ne;
+        newRow.excerpt_en = newRow.excerpt_en || newRow.excerpt_ne;
+        newRow.content_ne = newRow.content_ne ?? null;
+        newRow.content_en = newRow.content_en ?? null;
+        newRow.image_url = newRow.image_url ?? "preset:vishwaroop";
+        newRow.updated_at = now;
       }
       rows.push(newRow);
       inserted.push(newRow);
     }
 
     saveDb(db);
+    const projected = projectColumns(inserted, url.searchParams);
     if (wantsSingleObject) {
-      return jsonResponse(inserted[0] ?? null, 201);
+      return jsonResponse(projected[0] ?? null, 201);
     }
-    return jsonResponse(inserted, 201);
+    return jsonResponse(projected, 201);
   }
 
   if (method === "PATCH") {
     const patch = await parseBody(init);
-    const matching = applyPostgrestFilters(rows, url.searchParams);
+    const matching = filterAndSortRows(rows, url.searchParams);
     const ids = new Set(matching.map((m) => m.id));
     const now = new Date().toISOString();
     const updated: Record<string, unknown>[] = [];
@@ -570,15 +671,16 @@ const handleRestEndpoint = async (url: URL, method: string, init?: RequestInit):
       }
     }
     saveDb(db);
-    return jsonResponse(wantsSingleObject ? (updated[0] ?? null) : updated, 200);
+    const projected = projectColumns(updated, url.searchParams);
+    return jsonResponse(wantsSingleObject ? (projected[0] ?? null) : projected, 200);
   }
 
   if (method === "DELETE") {
-    const matching = applyPostgrestFilters(rows, url.searchParams);
+    const matching = filterAndSortRows(rows, url.searchParams);
     const ids = new Set(matching.map((m) => m.id));
     (db[table] as unknown as Record<string, unknown>[]) = rows.filter((r) => !ids.has(r.id));
     saveDb(db);
-    return jsonResponse(matching, 200);
+    return jsonResponse(projectColumns(matching, url.searchParams), 200);
   }
 
   return jsonResponse([], 200);
@@ -609,18 +711,18 @@ const buildCuratedSamagri = (pujaType: string) => {
 const buildPanditReply = (question: string): string => {
   const q = question.toLowerCase();
   if (q.includes("satyanarayan")) {
-    return `Namaste 🙏\n\nFor **सत्यनारायण पूजा (Satyanarayan Puja)**, Purnima (Full Moon) and Ekadashi/Sankranti are especially auspicious.\n\n### Essential Preparation\n- **Altar:** Place a clean wooden chowki facing **East** covered with red/yellow cloth, a **Kalash** with mango leaves & coconut, and Lord Vishnu's image.\n- **Panchamrit & Prasad:** Prepare *Panjeeri* (roasted wheat flour in cow ghee with sugar & fruits), *Panchamrit*, Tulsi leaves, and bananas.\n- **Procedure:** Begin with **Ganesh & Navagraha Puja**, listen attentively to all **5 chapters of Satyanarayan Katha**, and conclude with **Karpur Aarti**.\n\nYou can generate the full NPR shopping checklist in [Samagri Marketplace](/marketplace) or book a verified Pandit on [Services](/services#booking).\n\nॐ नमो भगवते वासुदेवाय 🙏`;
+    return `Namaste 🙏\n\nFor **सत्यनारायण पूजा (Satyanarayan Puja)**, Purnima (Full Moon) and Ekadashi/Sankranti are especially auspicious.\n\n### Essential Preparation\n- **Altar:** Place a clean wooden chowki facing **East** covered with red/yellow cloth, a **Kalash** with mango leaves & coconut, and Lord Vishnu's image.\n- **Panchamrit & Prasad:** Prepare *Panjeeri* (roasted wheat flour in cow ghee with sugar & fruits), *Panchamrit*, Tulsi leaves, and bananas.\n- **Procedure:** Begin with **Ganesh & Navagraha Puja**, listen attentively to all **5 chapters of Satyanarayan Katha**, and conclude with **Karpur Aarti**.\n\nYou can generate the full shopping checklist in [Samagri Marketplace](/marketplace) or book a verified Pandit on [Services](/services#booking).\n\nॐ नमो भगवते वासुदेवाय 🙏`;
   }
   if (q.includes("bratabandha") || q.includes("upanayana") || q.includes("janai")) {
     return `Namaste 🙏\n\n**ब्रतबन्ध / उपनयन संस्कार (Bratabandha)** marks spiritual initiation and receiving the **Gayatri Mantra**.\n\n### Key Steps\n1. **पूर्वाङ्ग र मुण्डन (Purification & Mundan):** Ritual bath and head-shaving on the auspicious Lagna.\n2. **यज्ञोपवीत धारण (Janai Dharan):** Investing the three-stranded sacred thread over the left shoulder.\n3. **गायत्री दीक्षा (Gayatri Diksha):** The Acharya whispers *ॐ भूर्भुवः स्वः...* into the initiate's right ear.\n4. **अग्नि हवन र भिक्षा (Havan & Bhiksha):** Offering oblations to Agni and symbolically receiving first alms from the mother.\n\nVisit [Services](/services#booking) to match with a Yajurveda/Rigveda Pandit for your family's kul-parampara.\n\nॐ शान्तिः शान्तिः शान्तिः 🙏`;
   }
   if (q.includes("griha") || q.includes("house") || q.includes("vastu")) {
-    return `Namaste 🙏\n\n**गृह प्रवेश (Griha Pravesh & Vastu Shanti)** sanctifies your new home before moving in.\n\n### Auspicious Guidelines\n- **Best Months:** Baishakh, Jestha, Mangsir, Magh, and Falgun during Shukla Paksha.\n- **Entrance Ritual:** Hang fresh mango-leaf *torans*, carry the **Mangal Kalash** inside leading with the right foot, and boil milk in the new kitchen until it overflows (symbolizing abundance).\n- **Havan:** Perform **Ganesh, Navagraha, Dikpala, and Vastu Purusha Homa** in the Northeast (*Ishan*) corner.\n\nBook a Jyotish-verified Muhurta and Pandit on [Services](/services#booking).\n\n शुभम् भवतु 🙏`;
+    return `Namaste 🙏\n\n**गृह प्रवेश (Griha Pravesh & Vastu Shanti)** sanctifies your new home before moving in.\n\n### Auspicious Guidelines\n- **Best Months:** Baishakh, Jestha, Mangsir, Magh, and Falgun during Shukla Paksha.\n- **Entrance Ritual:** Hang fresh mango-leaf *torans*, carry the **Mangal Kalash** inside leading with the right foot, and boil milk in the new kitchen until it overflows (symbolizing abundance).\n- **Havan:** Perform **Ganesh, Navagraha, Dikpala, and Vastu Purusha Homa** in the Northeast (*Ishan*) corner.\n\nBook a Jyotish-verified Muhurta and Pandit on [Services](/services#booking).\n\nशुभम् भवतु 🙏`;
   }
   if (q.includes("gayatri") || q.includes("mantra")) {
     return `Namaste 🙏\n\n### गायत्री मन्त्र (Gayatri Mantra)\n> **ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्॥**\n\n- **Transliteration:** *Om Bhur Bhuvah Svah, Tat Savitur Varenyam, Bhargo Devasya Dhimahi, Dhiyo Yo Nah Prachodayat.*\n- **Meaning:** We meditate upon the divine spiritual effulgence of Savitur (the Creator); may that supreme light illuminate our intellect along the path of Dharma.\n- **How to Chant:** Sit facing **East** at *Brahma Muhurta* or sunrise on a clean asana, keeping spine upright, and chant **11, 21, or 108 times** with steady breath.\n\nॐ शान्ति 🙏`;
   }
-  return `Namaste 🙏\n\nThank you for your question on **Sanatan Dharma & Nepali Karmakanda**.\n\n- **For Ceremony Preparation:** Begin every ritual with physical cleanliness (*Achaman*), a clear **Sankalpa** (stating Tithi, Nakshatra, Gotra, and purpose), **Ganesh Puja**, and **Kalash Sthapana**.\n- **Samagri Checklist:** Use our [Samagri Marketplace](/marketplace) for exact Nepali item names, quantities, and local prices.\n- **Verified Purohits:** Visit [Services](/services#booking) to schedule an experienced Pandit in Kathmandu, Lalitpur, Bhaktapur, Pokhara, or across Nepal.\n\nAsk me about any specific ritual (*Namakaran, Bratabandha, Vivah, Griha Pravesh, Satyanarayan, Rudri, or Shraddha*) for step-by-step guidance!\n\nॐ सर्वे भवन्तु सुखिनः 🙏`;
+  return `Namaste 🙏\n\nThank you for your question on **Sanatan Dharma & Nepali Karmakanda**.\n\n- **For Ceremony Preparation:** Begin every ritual with physical cleanliness (*Achaman*), a clear **Sankalpa** (stating Tithi, Nakshatra, Gotra, and purpose), **Ganesh Puja**, and **Kalash Sthapana**.\n- **Samagri Checklist:** Use our [Samagri Marketplace](/marketplace) for exact Nepali item names and quantities.\n- **Verified Purohits:** Visit [Services](/services#booking) to schedule an experienced Pandit in Kathmandu, Lalitpur, Bhaktapur, Pokhara, or across Nepal.\n\nAsk me about any specific ritual (*Namakaran, Bratabandha, Vivah, Griha Pravesh, Satyanarayan, Rudri, or Shraddha*) for step-by-step guidance!\n\nॐ सर्वे भवन्तु सुखिनः 🙏`;
 };
 
 const handleFunctionsEndpoint = async (url: URL, method: string, init?: RequestInit): Promise<Response> => {

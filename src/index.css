@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,66 +6,66 @@
 
 @layer base {
   :root {
-    --background: 30 25% 98%;
-    --foreground: 224 28% 12%;
+    --background: 36 35% 97.5%;
+    --foreground: 20 28% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 28% 12%;
+    --card-foreground: 20 28% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 28% 12%;
+    --popover-foreground: 20 28% 12%;
 
-    /* Nepali Simrik Crimson */
-    --primary: 354 70% 42%;
+    /* Auspicious Nepali Vermillion */
+    --primary: 8 76% 44%;
     --primary-foreground: 0 0% 100%;
 
-    /* Warm Temple Gold */
-    --secondary: 38 68% 46%;
+    /* Sacred Sage / Emerald Check */
+    --secondary: 156 58% 34%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 30 18% 94%;
-    --muted-foreground: 220 12% 44%;
+    --muted: 34 24% 93%;
+    --muted-foreground: 20 12% 43%;
 
-    --accent: 354 50% 95%;
-    --accent-foreground: 354 70% 36%;
+    --accent: 38 80% 94%;
+    --accent-foreground: 20 32% 16%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 30 16% 89%;
-    --input: 30 16% 88%;
-    --ring: 354 70% 42%;
+    --border: 34 20% 88%;
+    --input: 34 20% 87%;
+    --ring: 8 76% 44%;
 
     --radius: 0.875rem;
 
-    /* Theme tokens */
-    --saffron: 38 74% 48%;
-    --vermillion: 354 70% 42%;
-    --temple-gold: 38 65% 50%;
-    --cream: 30 25% 98%;
-    --deep-brown: 224 30% 11%;
-    --warm-stone: 220 14% 72%;
+    /* Sacred Tokens */
+    --saffron: 38 86% 52%;
+    --vermillion: 8 76% 44%;
+    --temple-gold: 40 72% 50%;
+    --cream: 36 38% 97%;
+    --deep-brown: 18 34% 12%;
+    --warm-stone: 34 18% 76%;
 
-    --gradient-saffron: linear-gradient(135deg, hsl(354 70% 42%), hsl(18 78% 46%));
-    --gradient-vermillion: linear-gradient(135deg, hsl(354 70% 42%), hsl(38 74% 48%));
-    --gradient-warm: linear-gradient(180deg, hsl(30 25% 98%), hsl(30 20% 95%));
-    --gradient-hero: linear-gradient(135deg, hsl(224 30% 11% / 0.85), hsl(354 70% 42% / 0.55));
+    --gradient-saffron: linear-gradient(135deg, hsl(38 90% 54%), hsl(18 85% 52%));
+    --gradient-vermillion: linear-gradient(135deg, hsl(8 76% 44%), hsl(34 86% 48%));
+    --gradient-warm: linear-gradient(180deg, hsl(36 35% 97.5%), hsl(34 28% 94%));
+    --gradient-hero: linear-gradient(135deg, hsl(18 34% 10% / 0.88), hsl(18 30% 14% / 0.62));
 
-    --shadow-warm: 0 6px 20px -4px hsl(354 70% 42% / 0.22);
-    --shadow-elevated: 0 12px 32px -10px hsl(224 28% 12% / 0.1);
-    --shadow-card: 0 2px 10px -2px hsl(224 28% 12% / 0.05);
+    --shadow-warm: 0 8px 24px -6px hsl(8 76% 44% / 0.28);
+    --shadow-elevated: 0 18px 40px -12px hsl(18 34% 12% / 0.12);
+    --shadow-card: 0 2px 12px -2px hsl(18 34% 12% / 0.06);
 
     --font-display: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif;
     --font-body: 'Plus Jakarta Sans', 'Mukta', system-ui, -apple-system, sans-serif;
 
-    --sidebar-background: 0 0% 99%;
-    --sidebar-foreground: 224 28% 18%;
-    --sidebar-primary: 354 70% 42%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 20 28% 14%;
+    --sidebar-primary: 8 76% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 18% 95%;
-    --sidebar-accent-foreground: 224 28% 12%;
-    --sidebar-border: 30 16% 90%;
-    --sidebar-ring: 354 70% 42%;
+    --sidebar-accent: 34 24% 94%;
+    --sidebar-accent-foreground: 20 28% 12%;
+    --sidebar-border: 34 20% 89%;
+    --sidebar-ring: 8 76% 44%;
   }
 }
 
@@ -77,7 +77,7 @@
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1, h2, h3 {
     font-family: var(--font-display);
   }
 }
@@ -97,9 +97,6 @@
   }
   .bg-gradient-warm {
     background: var(--gradient-warm);
-  }
-  .bg-gradient-hero {
-    background: var(--gradient-hero);
   }
   .shadow-warm {
     box-shadow: var(--shadow-warm);

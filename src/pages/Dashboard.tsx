@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Calendar, Clock, CheckCircle, XCircle, Plus, LogOut, User } from "lucide-react";
+import { Calendar, CheckCircle, XCircle, Plus, LogOut, User, ShoppingBag } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -18,23 +17,16 @@ interface Booking {
   status: "pending" | "confirmed" | "completed" | "cancelled";
   contact_name: string;
   address: string | null;
+  notes: string | null;
   created_at: string;
   pandit_id: string | null;
 }
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  confirmed: "bg-green-100 text-green-800 border-green-200",
-  completed: "bg-blue-100 text-blue-800 border-blue-200",
-  cancelled: "bg-red-100 text-red-800 border-red-200",
-};
-
-const statusIcons: Record<string, React.ReactNode> = {
-  pending: <Clock className="w-3.5 h-3.5" />,
-  confirmed: <CheckCircle className="w-3.5 h-3.5" />,
-  completed: <CheckCircle className="w-3.5 h-3.5" />,
-  cancelled: <XCircle className="w-3.5 h-3.5" />,
-};
+const statusSteps: { key: Booking["status"]; ne: string; en: string }[] = [
+  { key: "pending", ne: "अनुरोध पठाइयो", en: "Requested" },
+  { key: "confirmed", ne: "पण्डित पक्का", en: "Pandit Assigned" },
+  { key: "completed", ne: "पूजा सम्पन्न", en: "Completed" },
+];
 
 const Dashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -67,22 +59,29 @@ const Dashboard = () => {
 
     fetchData();
 
-    // Real-time subscription
     const channel = supabase
       .channel("bookings-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "bookings", filter: `user_id=eq.${user.id}` }, (payload) => {
-        if (payload.eventType === "INSERT") {
-          const inserted = payload.new as Booking;
-          setBookings((prev) => (prev.some((b) => b.id === inserted.id) ? prev : [inserted, ...prev]));
-        } else if (payload.eventType === "UPDATE") {
-          setBookings((prev) => prev.map((b) => (b.id === (payload.new as Booking).id ? (payload.new as Booking) : b)));
-        } else if (payload.eventType === "DELETE") {
-          setBookings((prev) => prev.filter((b) => b.id !== (payload.old as { id?: string }).id));
-        }
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const inserted = payload.new as Booking;
+            setBookings((prev) => (prev.some((b) => b.id === inserted.id) ? prev : [inserted, ...prev]));
+          } else if (payload.eventType === "UPDATE") {
+            setBookings((prev) =>
+              prev.map((b) => (b.id === (payload.new as Booking).id ? (payload.new as Booking) : b)),
+            );
+          } else if (payload.eventType === "DELETE") {
+            setBookings((prev) => prev.filter((b) => b.id !== (payload.old as { id?: string }).id));
+          }
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleCancelBooking = async (id: string) => {
@@ -96,12 +95,14 @@ const Dashboard = () => {
     setCancellingId(null);
 
     if (error) {
-      toast({ title: "Could not cancel booking", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)));
-    toast({ title: "Booking cancelled", description: "Your ceremony request has been cancelled." });
+    toast({
+      title: lang === "ne" ? "बुकिङ रद्द गरियो" : "Booking cancelled",
+    });
   };
 
   if (authLoading || !user) return null;
@@ -109,36 +110,51 @@ const Dashboard = () => {
   const displayName =
     profile?.full_name ||
     (typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "") ||
-    "Devotee";
+    (lang === "ne" ? "भक्तजन" : "Devotee");
 
-  const stats = {
-    total: bookings.length,
-    pending: bookings.filter((b) => b.status === "pending").length,
-    confirmed: bookings.filter((b) => b.status === "confirmed").length,
-    completed: bookings.filter((b) => b.status === "completed").length,
+  const stats = [
+    { label: lang === "ne" ? "जम्मा बुकिङ" : "Total", value: bookings.length },
+    { label: lang === "ne" ? "प्रतीक्षामा" : "Pending", value: bookings.filter((b) => b.status === "pending").length },
+    { label: lang === "ne" ? "पक्का भएको" : "Confirmed", value: bookings.filter((b) => b.status === "confirmed").length },
+    { label: lang === "ne" ? "सम्पन्न" : "Completed", value: bookings.filter((b) => b.status === "completed").length },
+  ];
+
+  const getStepIndex = (status: Booking["status"]) => {
+    if (status === "pending") return 0;
+    if (status === "confirmed") return 1;
+    if (status === "completed") return 2;
+    return -1;
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <section className="pt-24 pb-8 bg-gradient-warm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+
+      <section className="pt-24 pb-8 bg-gradient-warm border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+              <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
                 🙏 {lang === "ne" ? `नमस्ते, ${displayName}` : `Namaste, ${displayName}`}
               </h1>
-              <p className="text-muted-foreground mt-1">
-                {lang === "ne" ? "तपाईंका पूजा बुकिङहरूको विवरण" : "Manage your ceremony bookings"}
+              <p className="text-muted-foreground text-sm mt-0.5">
+                {lang === "ne"
+                  ? "तपाईंका पूजा प्याकेज र सेवा ट्र्याकिङ"
+                  : "Track your ceremony packages and assigned Pandits"}
               </p>
             </div>
-            <div className="flex gap-3">
-              <Link to="/services#booking">
+            <div className="flex flex-wrap gap-2.5">
+              <Link to="/services">
                 <Button size="sm" className="rounded-full">
-                  <Plus className="w-4 h-4 mr-1" /> {lang === "ne" ? "नयाँ बुकिङ" : "New Booking"}
+                  <Plus className="w-4 h-4 mr-1" /> {lang === "ne" ? "नयाँ सेवा बुक" : "Book Package"}
                 </Button>
               </Link>
-              <Button variant="outline" size="sm" className="rounded-full" onClick={signOut}>
+              <Link to="/marketplace">
+                <Button variant="outline" size="sm" className="rounded-full">
+                  <ShoppingBag className="w-4 h-4 mr-1" /> {lang === "ne" ? "सामग्री किट" : "Samagri Kit"}
+                </Button>
+              </Link>
+              <Button variant="ghost" size="sm" className="rounded-full" onClick={signOut}>
                 <LogOut className="w-4 h-4 mr-1" /> {lang === "ne" ? "साइन आउट" : "Sign Out"}
               </Button>
             </div>
@@ -146,82 +162,126 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <section className="py-8 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Stats */}
+      <section className="py-10 flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { label: "Total Bookings", value: stats.total, color: "text-foreground" },
-              { label: "Pending", value: stats.pending, color: "text-yellow-600" },
-              { label: "Confirmed", value: stats.confirmed, color: "text-green-600" },
-              { label: "Completed", value: stats.completed, color: "text-blue-600" },
-            ].map((s) => (
-              <div key={s.label} className="bg-card rounded-xl p-5 border border-border text-center">
-                <p className={`font-display text-3xl font-bold ${s.color}`}>{s.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
+            {stats.map((s) => (
+              <div key={s.label} className="bg-card rounded-2xl p-4 border border-border">
+                <p className="text-2xl font-extrabold text-foreground">{s.value}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
               </div>
             ))}
           </div>
 
-          {/* Bookings List */}
-          <h2 className="font-display text-2xl font-bold text-foreground mb-4">Your Bookings</h2>
+          <h2 className="font-bold text-lg text-foreground mb-4">
+            {lang === "ne" ? "मेरा सेवा बुकिङहरू" : "My Ceremony Bookings"}
+          </h2>
+
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              {lang === "ne" ? "लोड हुँदैछ..." : "Loading..."}
+            </div>
           ) : bookings.length === 0 ? (
-            <div className="text-center py-16 bg-card rounded-2xl border border-border">
-              <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-display text-xl font-semibold text-foreground mb-2">No bookings yet</h3>
-              <p className="text-muted-foreground mb-6">Book your first puja ceremony to get started</p>
-              <Link to="/services#booking">
-                <Button><Plus className="w-4 h-4 mr-1" /> Book a Puja</Button>
+            <div className="text-center py-14 bg-card rounded-2xl border border-border">
+              <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-bold text-lg text-foreground mb-1">
+                {lang === "ne" ? "अहिलेसम्म कुनै बुकिङ छैन" : "No bookings yet"}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                {lang === "ne"
+                  ? "पण्डित र पूजा सामग्री किट एकै क्लिकमा बुक गर्नुहोस्।"
+                  : "Book your first all-inclusive puja package in minutes."}
+              </p>
+              <Link to="/services">
+                <Button className="rounded-full">
+                  <Plus className="w-4 h-4 mr-1" /> {lang === "ne" ? "प्याकेज छान्नुहोस्" : "Browse Packages"}
+                </Button>
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
-              {bookings.map((booking, i) => (
-                <motion.div
-                  key={booking.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="bg-card rounded-xl p-5 border border-border hover:shadow-card transition-all"
-                >
-                  <div className="flex flex-col md:flex-row justify-between gap-3">
-                    <div className="flex-1">
-                      <h3 className="font-display text-lg font-semibold text-foreground">{booking.ritual_type}</h3>
-                      <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {format(parseISO(booking.preferred_date), "PPP")}
-                        </span>
-                        {booking.address && (
-                          <span className="flex items-center gap-1">📍 {booking.address}</span>
+            <div className="space-y-4">
+              {bookings.map((booking) => {
+                const stepIdx = getStepIndex(booking.status);
+                return (
+                  <div
+                    key={booking.id}
+                    className="bg-card rounded-2xl p-5 border border-border shadow-card space-y-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-base text-foreground">{booking.ritual_type}</h3>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-primary" />
+                            {format(parseISO(booking.preferred_date), "PPP")}
+                          </span>
+                          {booking.address && <span>📍 {booking.address}</span>}
+                          <span className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5" /> {booking.contact_name}
+                          </span>
+                        </div>
+                        {booking.notes && (
+                          <p className="text-xs text-secondary font-medium mt-1.5">{booking.notes}</p>
                         )}
-                        <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5" /> {booking.contact_name}
-                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {booking.status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full text-xs h-8"
+                            disabled={cancellingId === booking.id}
+                            onClick={() => handleCancelBooking(booking.id)}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" />
+                            {cancellingId === booking.id
+                              ? "..."
+                              : lang === "ne"
+                                ? "रद्द गर्नुहोस्"
+                                : "Cancel"}
+                          </Button>
+                        )}
+                        {booking.status === "cancelled" && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-semibold">
+                            <XCircle className="w-3.5 h-3.5" />
+                            {lang === "ne" ? "रद्द भएको" : "Cancelled"}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {booking.status === "pending" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={cancellingId === booking.id}
-                          onClick={() => handleCancelBooking(booking.id)}
-                        >
-                          <XCircle className="w-3.5 h-3.5 mr-1" />
-                          {cancellingId === booking.id ? "Cancelling..." : "Cancel"}
-                        </Button>
-                      )}
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${statusColors[booking.status]}`}>
-                        {statusIcons[booking.status]}
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                      </span>
-                    </div>
+
+                    {/* Service Progress Stepper */}
+                    {booking.status !== "cancelled" && (
+                      <div className="pt-3 border-t border-border grid grid-cols-3 gap-2">
+                        {statusSteps.map((st, idx) => {
+                          const active = idx <= stepIdx;
+                          return (
+                            <div key={st.key} className="flex items-center gap-2">
+                              <div
+                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                  active
+                                    ? "bg-secondary text-secondary-foreground"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                {active ? <CheckCircle className="w-3.5 h-3.5" /> : idx + 1}
+                              </div>
+                              <span
+                                className={`text-xs font-medium truncate ${
+                                  active ? "text-foreground" : "text-muted-foreground"
+                                }`}
+                              >
+                                {lang === "ne" ? st.ne : st.en}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </motion.div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

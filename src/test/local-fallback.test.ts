@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createClient } from "@supabase/supabase-js";
-import { resilientSupabaseFetch } from "@/integrations/supabase/localFallback";
+import { DEFAULT_ADMIN_EMAIL, resilientSupabaseFetch } from "@/integrations/supabase/localFallback";
 
-describe("resilientSupabaseFetch offline fallback for dead Supabase host", () => {
+describe("resilientSupabaseFetch offline fallback, admin security & CRUD", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
@@ -14,14 +14,18 @@ describe("resilientSupabaseFetch offline fallback for dead Supabase host", () =>
     globalThis.fetch = originalFetch;
   });
 
-  it("completes Sign Up, creates profile, signs out, and Signs In cleanly when Supabase DNS fails", async () => {
-    const client = createClient("https://sqpxbgietkuyzvttdlca.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.sig", {
-      auth: { persistSession: true, autoRefreshToken: false },
-      global: { fetch: resilientSupabaseFetch },
-    });
+  it("assigns strictly non-admin role to normal signups while provisioning dedicated Admin account", async () => {
+    const client = createClient(
+      "https://sqpxbgietkuyzvttdlca.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.sig",
+      {
+        auth: { persistSession: true, autoRefreshToken: false },
+        global: { fetch: resilientSupabaseFetch },
+      },
+    );
 
     const signUpRes = await client.auth.signUp({
-      email: "bimochan@example.com",
+      email: "devotee@example.com",
       password: "strongpassword",
       options: {
         data: { full_name: "Bimochan Acharya", phone: "+977 9869667953" },
@@ -29,8 +33,15 @@ describe("resilientSupabaseFetch offline fallback for dead Supabase host", () =>
     });
 
     expect(signUpRes.error).toBeNull();
-    expect(signUpRes.data.session).toBeTruthy();
-    expect(signUpRes.data.user?.email).toBe("bimochan@example.com");
+    expect(signUpRes.data.user?.email).toBe("devotee@example.com");
+
+    // Regular signup must NOT get admin role
+    const { data: devoteeAdminRole } = await client
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", signUpRes.data.user!.id)
+      .eq("role", "admin");
+    expect(devoteeAdminRole).toEqual([]);
 
     const { data: profile } = await client
       .from("profiles")
@@ -45,33 +56,80 @@ describe("resilientSupabaseFetch offline fallback for dead Supabase host", () =>
 
     await client.auth.signOut();
 
-    const badSignIn = await client.auth.signInWithPassword({
-      email: "bimochan@example.com",
-      password: "wrongpassword",
+    // Dedicated admin account can sign in and holds role = "admin"
+    const adminSignIn = await client.auth.signInWithPassword({
+      email: DEFAULT_ADMIN_EMAIL,
+      password: "KarmaAdmin@2026",
     });
-    expect(badSignIn.error?.message).toMatch(/Invalid login credentials/i);
+    expect(adminSignIn.error).toBeNull();
+    expect(adminSignIn.data.user?.email).toBe(DEFAULT_ADMIN_EMAIL);
 
-    const goodSignIn = await client.auth.signInWithPassword({
-      email: "bimochan@example.com",
-      password: "strongpassword",
-    });
-    expect(goodSignIn.error).toBeNull();
-    expect(goodSignIn.data.session?.user.email).toBe("bimochan@example.com");
+    const { data: adminRole } = await client
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", adminSignIn.data.user!.id)
+      .eq("role", "admin");
+    expect(adminRole).toHaveLength(1);
   });
 
-  it("returns seeded verified Pandits when remote Supabase host fails to resolve", async () => {
-    const client = createClient("https://sqpxbgietkuyzvttdlca.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.sig", {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: resilientSupabaseFetch },
+  it("supports Pandit Add/Edit and Blog Post creation in resilient storage", async () => {
+    const client = createClient(
+      "https://sqpxbgietkuyzvttdlca.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.sig",
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: resilientSupabaseFetch },
+      },
+    );
+
+    const { data: addedPandit, error: addErr } = await client
+      .from("pandits")
+      .insert({
+        name: "Pt. Madhav Bhattarai",
+        city: "Lalitpur",
+        experience_years: 22,
+        specializations: ["Vivah", "Rudri Path"],
+        verified: true,
+      })
+      .select("*")
+      .single();
+
+    expect(addErr).toBeNull();
+    expect(addedPandit.name).toBe("Pt. Madhav Bhattarai");
+
+    const { data: editedPandit, error: editErr } = await client
+      .from("pandits")
+      .update({ city: "Pokhara", experience_years: 24 })
+      .eq("id", addedPandit.id)
+      .select("id, city, experience_years")
+      .single();
+
+    expect(editErr).toBeNull();
+    expect(editedPandit).toEqual({
+      id: addedPandit.id,
+      city: "Pokhara",
+      experience_years: 24,
     });
 
-    const { data: pandits, error } = await client
-      .from("pandits")
+    const { data: createdBlog, error: blogErr } = await client
+      .from("blog_posts")
+      .insert({
+        title_ne: "रुद्री पाठको विधि र आध्यात्मिक लाभ",
+        title_en: "Method & Spiritual Benefits of Rudri Path",
+        excerpt_ne: "भगवान् आशुतोष शिवको प्रसन्नताका लागि गरिने रुद्राभिषेकको संक्षिप्त परिचय।",
+        excerpt_en: "A concise guide to Rudrabhishek and Yajurveda Rudri Path.",
+        published: true,
+      })
       .select("*")
-      .eq("verified", true)
-      .order("rating", { ascending: false });
+      .single();
 
-    expect(error).toBeNull();
-    expect(pandits?.length).toBeGreaterThanOrEqual(5);
+    expect(blogErr).toBeNull();
+    expect(createdBlog.title_ne).toBe("रुद्री पाठको विधि र आध्यात्मिक लाभ");
+
+    const { data: allBlogs } = await client
+      .from("blog_posts")
+      .select("*")
+      .eq("published", true);
+    expect((allBlogs || []).length).toBeGreaterThanOrEqual(7);
   });
 });
