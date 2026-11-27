@@ -73,7 +73,7 @@ const Contact = () => {
                 {
                   icon: MapPin,
                   label: lang === "ne" ? "ठेगाना" : "Location",
-                  value: lang === "ne" ? "बागबजार, काठमाडौं, नेपाल" : "Bagbazar, Kathmandu, Nepal",
+                  value: lang === "ne" ? "Bansbari, काठमाडौं, नेपाल" : "Bagbazar, Kathmandu, Nepal",
                 },
                 {
                   icon: Phone,
